@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
@@ -223,12 +223,35 @@ const Messages = () => {
   // If a chat is selected, show the chat interface
   if (selectedChat) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <TopBar showBackButton />
+      <div className="min-h-screen bg-background flex flex-col h-screen overflow-hidden">
+        {/* Minimal header with only back button for mobile */}
+        <div className="lg:hidden flex-shrink-0 h-14 bg-card border-b border-border flex items-center px-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBackToList}
+            aria-label="Back to messages"
+          >
+            <AiOutlineArrowLeft size={24} />
+          </Button>
+          <Link 
+            to={`/profile/${selectedChat.uid}`}
+            className="flex items-center gap-3 ml-3 hover:opacity-70 transition-opacity"
+          >
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={selectedChat.profilePicUrl} />
+              <AvatarFallback>
+                {selectedChat.username[0].toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <h2 className="font-semibold">{selectedChat.username}</h2>
+          </Link>
+        </div>
+        
         <DesktopSidebar />
         
         {/* Chat interface fills remaining height */}
-        <main className="lg:ml-64 xl:ml-72 flex-1 pt-14 lg:pt-0 flex flex-col overflow-hidden">
+        <main className="lg:ml-64 xl:ml-72 flex-1 pt-0 lg:pt-0 flex flex-col overflow-hidden">
           <ChatInterface
             recipientId={selectedChat.uid}
             recipientUsername={selectedChat.username}

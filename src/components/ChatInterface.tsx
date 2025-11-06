@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   collection, 
   query, 
@@ -137,25 +138,27 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header - Fixed at top */}
-      <div className="flex-shrink-0 flex items-center gap-3 p-4 border-b border-border bg-card">
+      {/* Header - Only show on desktop, hidden on mobile (parent Messages.tsx has header) */}
+      <div className="hidden lg:flex flex-shrink-0 items-center gap-3 p-4 border-b border-border bg-card">
         <Button
           variant="ghost"
           size="icon"
           onClick={onBack}
-          className="lg:hidden"
         >
           <AiOutlineArrowLeft size={24} />
         </Button>
-        <Avatar className="w-10 h-10">
-          <AvatarImage src={recipientProfilePic} />
-          <AvatarFallback>
-            {recipientUsername[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
+        <Link 
+          to={`/profile/${recipientId}`}
+          className="flex items-center gap-3 flex-1 hover:opacity-70 transition-opacity"
+        >
+          <Avatar className="w-10 h-10">
+            <AvatarImage src={recipientProfilePic} />
+            <AvatarFallback>
+              {recipientUsername[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
           <h2 className="font-semibold">{recipientUsername}</h2>
-        </div>
+        </Link>
       </div>
 
       {/* Messages - Scrollable area */}
