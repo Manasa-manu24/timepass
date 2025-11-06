@@ -137,8 +137,8 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border bg-card">
+      {/* Header - Fixed at top */}
+      <div className="flex-shrink-0 flex items-center gap-3 p-4 border-b border-border bg-card">
         <Button
           variant="ghost"
           size="icon"
@@ -158,9 +158,9 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
         </div>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+      {/* Messages - Scrollable area */}
+      <ScrollArea className="flex-1 p-4 overflow-y-auto">
+        <div className="space-y-4 pb-4">
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No messages yet</p>
@@ -197,8 +197,11 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
         </div>
       </ScrollArea>
 
-      {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="p-4 border-t border-border bg-card">
+      {/* Message Input - Fixed at bottom, safe area for mobile keyboards */}
+      <form 
+        onSubmit={handleSendMessage} 
+        className="flex-shrink-0 p-4 border-t border-border bg-card safe-bottom"
+      >
         <div className="flex items-center gap-2">
           <Input
             type="text"
@@ -207,11 +210,13 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
             onChange={(e) => setNewMessage(e.target.value)}
             disabled={sending}
             className="flex-1"
+            autoComplete="off"
           />
           <Button
             type="submit"
             size="icon"
             disabled={!newMessage.trim() || sending}
+            aria-label="Send message"
           >
             <AiOutlineSend size={20} />
           </Button>

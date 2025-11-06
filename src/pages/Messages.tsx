@@ -223,11 +223,12 @@ const Messages = () => {
   // If a chat is selected, show the chat interface
   if (selectedChat) {
     return (
-      <div className="min-h-screen bg-background">
-        <TopBar title={selectedChat.username} showBackButton />
+      <div className="min-h-screen bg-background flex flex-col">
+        <TopBar showBackButton />
         <DesktopSidebar />
         
-        <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0 pb-0 lg:pb-0 h-screen">
+        {/* Chat interface fills remaining height */}
+        <main className="lg:ml-64 xl:ml-72 flex-1 pt-14 lg:pt-0 flex flex-col overflow-hidden">
           <ChatInterface
             recipientId={selectedChat.uid}
             recipientUsername={selectedChat.username}
@@ -236,7 +237,7 @@ const Messages = () => {
           />
         </main>
 
-        <MobileBottomNav />
+        {/* Hide bottom nav on mobile during chat session */}
       </div>
     );
   }
