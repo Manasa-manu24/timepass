@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
+import EditProfileDialog from '@/components/EditProfileDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { BsGrid3X3 } from 'react-icons/bs';
@@ -34,36 +35,36 @@ const Profile = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!userId) return;
+  const fetchProfile = async () => {
+    if (!userId) return;
 
-      try {
-        // Fetch user profile
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (userDoc.exists()) {
-          setProfile(userDoc.data() as UserProfile);
-        }
-
-        // Fetch user posts
-        const postsQuery = query(
-          collection(db, 'posts'),
-          where('authorId', '==', userId)
-        );
-        const postsSnapshot = await getDocs(postsQuery);
-        const postsData = postsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Post[];
-        
-        setPosts(postsData);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setLoading(false);
+    try {
+      // Fetch user profile
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        setProfile(userDoc.data() as UserProfile);
       }
-    };
 
+      // Fetch user posts
+      const postsQuery = query(
+        collection(db, 'posts'),
+        where('authorId', '==', userId)
+      );
+      const postsSnapshot = await getDocs(postsQuery);
+      const postsData = postsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Post[];
+      
+      setPosts(postsData);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProfile();
   }, [userId]);
 
@@ -118,7 +119,14 @@ const Profile = () => {
             <div className="flex items-center gap-4 mb-4">
               <h1 className="text-2xl font-light">{profile.username}</h1>
               {isOwnProfile ? (
-                <Button variant="secondary">Edit Profile</Button>
+                <EditProfileDialog
+                  userId={userId!}
+                  currentUsername={profile.username}
+                  currentDisplayName={profile.displayName}
+                  currentBio={profile.bio}
+                  currentProfilePic={profile.profilePicUrl}
+                  onProfileUpdate={fetchProfile}
+                />
               ) : (
                 <Button>Follow</Button>
               )}

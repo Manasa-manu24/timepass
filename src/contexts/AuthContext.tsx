@@ -76,6 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         bio: '',
         followers: [],
         following: [],
+        savedPosts: [],
         createdAt: new Date().toISOString()
       });
 

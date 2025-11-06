@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
@@ -15,8 +15,9 @@ interface Post {
   caption: string;
   mediaUrl: string;
   mediaType: 'image' | 'video';
+  postType?: 'post' | 'reel' | 'story';
   likes: string[];
-  timestamp: string;
+  timestamp: any; // Can be string, Date, or Firestore Timestamp
   commentsCount: number;
 }
 
@@ -24,12 +25,30 @@ const Home = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savedPosts, setSavedPosts] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Fetch user's saved posts
+    const fetchSavedPosts = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        setSavedPosts(userData?.savedPosts || []);
+      } catch (error) {
+        console.error('Error fetching saved posts:', error);
+      }
+    };
+
+    fetchSavedPosts();
+  }, [user]);
 
   useEffect(() => {
     // Listen to posts in real-time
+    // Query without orderBy to avoid index requirement issues
     const postsQuery = query(
-      collection(db, 'posts'),
-      orderBy('timestamp', 'desc')
+      collection(db, 'posts')
     );
 
     const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
@@ -38,7 +57,33 @@ const Home = () => {
         ...doc.data()
       })) as Post[];
       
-      setPosts(postsData);
+      // Sort posts client-side by timestamp
+      const sortedPosts = postsData.sort((a, b) => {
+        // Helper to convert timestamp to milliseconds
+        const getTime = (timestamp: any): number => {
+          if (!timestamp) return 0;
+          
+          // If it's a Firestore Timestamp object
+          if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate().getTime();
+          }
+          
+          // If it's already a Date object
+          if (timestamp instanceof Date) {
+            return timestamp.getTime();
+          }
+          
+          // If it's a string or number, try to convert
+          const date = new Date(timestamp);
+          return isNaN(date.getTime()) ? 0 : date.getTime();
+        };
+        
+        const timeA = getTime(a.timestamp);
+        const timeB = getTime(b.timestamp);
+        return timeB - timeA; // Descending order (newest first)
+      });
+      
+      setPosts(sortedPosts);
       setLoading(false);
     }, (error) => {
       console.error('Error fetching posts:', error);
@@ -73,6 +118,14 @@ const Home = () => {
     }
   };
 
+  const handleSaveToggle = (postId: string, isSaved: boolean) => {
+    if (isSaved) {
+      setSavedPosts([...savedPosts, postId]);
+    } else {
+      setSavedPosts(savedPosts.filter(id => id !== postId));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
@@ -94,6 +147,8 @@ const Home = () => {
               post={post}
               currentUserId={user?.uid}
               onLike={handleLike}
+              savedPosts={savedPosts}
+              onSaveToggle={handleSaveToggle}
             />
           ))
         )}

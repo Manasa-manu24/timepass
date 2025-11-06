@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,8 +55,9 @@ const Create = () => {
         caption,
         mediaUrl,
         mediaType: file.type.startsWith('image/') ? 'image' : 'video',
+        postType: 'post', // Regular post type
         likes: [],
-        timestamp: new Date().toISOString(),
+        timestamp: serverTimestamp(),
         commentsCount: 0
       });
 

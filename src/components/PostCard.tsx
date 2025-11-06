@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { AiOutlineHeart, AiFillHeart, AiOutlineComment, AiOutlineSend } from 'react-icons/ai';
-import { BsBookmark, BsThreeDots } from 'react-icons/bs';
+import { BsBookmark, BsBookmarkFill, BsThreeDots } from 'react-icons/bs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+import CommentsDialog from '@/components/CommentsDialog';
 
 interface PostCardProps {
   post: {
@@ -16,21 +20,112 @@ interface PostCardProps {
     mediaUrl: string;
     mediaType: 'image' | 'video';
     likes: string[];
-    timestamp: string;
+    timestamp: any; // Can be string, Date, or Firestore Timestamp
     commentsCount: number;
   };
   currentUserId?: string;
   onLike?: (postId: string) => void;
+  savedPosts?: string[];
+  onSaveToggle?: (postId: string, isSaved: boolean) => void;
 }
 
-const PostCard = ({ post, currentUserId, onLike }: PostCardProps) => {
+const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }: PostCardProps) => {
   const [isLiked, setIsLiked] = useState(
     currentUserId ? post.likes.includes(currentUserId) : false
   );
+  const [isSaved, setIsSaved] = useState(
+    savedPosts.includes(post.id)
+  );
+  const [commentsOpen, setCommentsOpen] = useState(false);
+
+  // Helper function to convert timestamp to Date object
+  const getTimestampDate = (timestamp: any): Date => {
+    if (!timestamp) {
+      return new Date(); // Return current date if no timestamp
+    }
+    
+    // If it's a Firestore Timestamp object
+    if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+    
+    // If it's already a Date object
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+    
+    // If it's a string or number, try to convert
+    const date = new Date(timestamp);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return new Date(); // Return current date if invalid
+    }
+    
+    return date;
+  };
 
   const handleLike = () => {
     setIsLiked(!isLiked);
     onLike?.(post.id);
+  };
+
+  const handleSave = async () => {
+    if (!currentUserId) {
+      toast.error('Please sign in to save posts');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', currentUserId);
+      
+      if (isSaved) {
+        // Unsave
+        await updateDoc(userRef, {
+          savedPosts: arrayRemove(post.id)
+        });
+        setIsSaved(false);
+        toast.success('Post removed from saved');
+      } else {
+        // Save
+        await updateDoc(userRef, {
+          savedPosts: arrayUnion(post.id)
+        });
+        setIsSaved(true);
+        toast.success('Post saved!');
+      }
+      
+      onSaveToggle?.(post.id, !isSaved);
+    } catch (error) {
+      console.error('Error saving post:', error);
+      toast.error('Failed to save post');
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/post/${post.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${post.authorUsername}'s post`,
+          text: post.caption,
+          url: shareUrl,
+        });
+        toast.success('Shared successfully!');
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback to copying link
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied to clipboard!');
+      } catch (error) {
+        console.error('Error copying link:', error);
+        toast.error('Failed to copy link');
+      }
+    }
   };
 
   return (
@@ -50,18 +145,18 @@ const PostCard = ({ post, currentUserId, onLike }: PostCardProps) => {
       </div>
 
       {/* Post Media */}
-      <div className="w-full aspect-square bg-secondary">
+      <div className="w-full aspect-square bg-white flex items-center justify-center">
         {post.mediaType === 'image' ? (
           <img
             src={post.mediaUrl}
             alt={post.caption}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : (
           <video
             src={post.mediaUrl}
             controls
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         )}
       </div>
@@ -82,15 +177,34 @@ const PostCard = ({ post, currentUserId, onLike }: PostCardProps) => {
                 <AiOutlineHeart size={24} />
               )}
             </Button>
-            <Button variant="ghost" size="icon" className="hover:opacity-70">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="hover:opacity-70"
+              onClick={() => setCommentsOpen(true)}
+            >
               <AiOutlineComment size={24} />
             </Button>
-            <Button variant="ghost" size="icon" className="hover:opacity-70">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="hover:opacity-70"
+              onClick={handleShare}
+            >
               <AiOutlineSend size={24} />
             </Button>
           </div>
-          <Button variant="ghost" size="icon" className="hover:opacity-70">
-            <BsBookmark size={20} />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:opacity-70"
+            onClick={handleSave}
+          >
+            {isSaved ? (
+              <BsBookmarkFill size={20} className="text-foreground" />
+            ) : (
+              <BsBookmark size={20} />
+            )}
           </Button>
         </div>
 
@@ -107,16 +221,26 @@ const PostCard = ({ post, currentUserId, onLike }: PostCardProps) => {
 
         {/* Comments Count */}
         {post.commentsCount > 0 && (
-          <button className="text-sm text-muted-foreground mb-2">
+          <button 
+            className="text-sm text-muted-foreground mb-2"
+            onClick={() => setCommentsOpen(true)}
+          >
             View all {post.commentsCount} comments
           </button>
         )}
 
         {/* Timestamp */}
         <div className="text-xs text-muted-foreground uppercase">
-          {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+          {formatDistanceToNow(getTimestampDate(post.timestamp), { addSuffix: true })}
         </div>
       </div>
+
+      {/* Comments Dialog */}
+      <CommentsDialog
+        postId={post.id}
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+      />
     </Card>
   );
 };

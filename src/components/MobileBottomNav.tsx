@@ -20,10 +20,10 @@ const MobileBottomNav = () => {
         role="navigation"
         aria-label="Mobile navigation"
       >
-        <div className="flex items-center justify-around h-14 px-2 safe-bottom">
+        <div className="flex items-center justify-around h-16 px-2 safe-bottom">
           <Link 
             to="/" 
-            className="flex items-center justify-center w-12 h-12 hover:opacity-70 transition"
+            className="flex items-center justify-center w-14 h-14 hover:opacity-70 transition"
             aria-label="Home"
             role="tab"
             aria-selected={isActive('/')}
@@ -33,7 +33,7 @@ const MobileBottomNav = () => {
 
           <Link 
             to="/search" 
-            className="flex items-center justify-center w-12 h-12 hover:opacity-70 transition"
+            className="flex items-center justify-center w-14 h-14 hover:opacity-70 transition"
             aria-label="Search"
             role="tab"
             aria-selected={isActive('/search')}
@@ -41,20 +41,10 @@ const MobileBottomNav = () => {
             <AiOutlineSearch size={28} />
           </Link>
 
-          <Link 
-            to="/reels" 
-            className="flex items-center justify-center w-12 h-12 hover:opacity-70 transition"
-            aria-label="Reels"
-            role="tab"
-            aria-selected={isActive('/reels')}
-          >
-            {isActive('/reels') ? <BsCameraReelsFill size={26} /> : <BsCameraReels size={26} />}
-          </Link>
-
           {/* Upload FAB - Center */}
           <button
             onClick={() => setUploadOpen(true)}
-            className="w-14 h-14 -mt-6 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-400 shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+            className="w-14 h-14 -mt-8 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-400 shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
             aria-label="Upload content"
             role="tab"
           >
@@ -62,8 +52,18 @@ const MobileBottomNav = () => {
           </button>
 
           <Link 
+            to="/reels" 
+            className="flex items-center justify-center w-14 h-14 hover:opacity-70 transition"
+            aria-label="Reels"
+            role="tab"
+            aria-selected={isActive('/reels')}
+          >
+            {isActive('/reels') ? <BsCameraReelsFill size={24} /> : <BsCameraReels size={24} />}
+          </Link>
+
+          <Link 
             to={`/profile/${user?.uid}`}
-            className="flex items-center justify-center w-12 h-12 hover:opacity-70 transition"
+            className="flex items-center justify-center w-14 h-14 hover:opacity-70 transition"
             aria-label="Profile"
             role="tab"
             aria-selected={isActive(`/profile/${user?.uid}`)}

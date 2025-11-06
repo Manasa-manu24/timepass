@@ -110,7 +110,10 @@ const Notifications = () => {
                     {getNotificationText(notif)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {notif.timestamp && formatDistanceToNow(notif.timestamp.toDate(), { addSuffix: true })}
+                    {notif.timestamp && notif.timestamp.toDate ? 
+                      formatDistanceToNow(notif.timestamp.toDate(), { addSuffix: true }) : 
+                      'Just now'
+                    }
                   </p>
                 </div>
                 {!notif.read && (

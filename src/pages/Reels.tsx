@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
@@ -14,8 +14,9 @@ interface Reel {
   caption: string;
   mediaUrl: string;
   likes: string[];
-  timestamp: string;
+  timestamp: any; // Can be string, Date, or Firestore Timestamp
   commentsCount: number;
+  postType?: 'post' | 'reel' | 'story';
 }
 
 const Reels = () => {
@@ -25,10 +26,10 @@ const Reels = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Query for reels (posts with video mediaType)
     const reelsQuery = query(
       collection(db, 'posts'),
-      where('postType', '==', 'reel'),
-      orderBy('timestamp', 'desc')
+      where('mediaType', '==', 'video')
     );
 
     const unsubscribe = onSnapshot(reelsQuery, (snapshot) => {
@@ -37,7 +38,35 @@ const Reels = () => {
         ...doc.data()
       })) as Reel[];
       
-      setReels(reelsData);
+      // Filter for reels or videos posted as reels and sort client-side
+      const filteredReels = reelsData
+        .filter(reel => !reel.postType || reel.postType === 'reel')
+        .sort((a, b) => {
+          // Helper to convert timestamp to milliseconds
+          const getTime = (timestamp: any): number => {
+            if (!timestamp) return 0;
+            
+            // If it's a Firestore Timestamp object
+            if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+              return timestamp.toDate().getTime();
+            }
+            
+            // If it's already a Date object
+            if (timestamp instanceof Date) {
+              return timestamp.getTime();
+            }
+            
+            // If it's a string or number, try to convert
+            const date = new Date(timestamp);
+            return isNaN(date.getTime()) ? 0 : date.getTime();
+          };
+          
+          const timeA = getTime(a.timestamp);
+          const timeB = getTime(b.timestamp);
+          return timeB - timeA; // Descending order (newest first)
+        });
+      
+      setReels(filteredReels);
       setLoading(false);
     }, (error) => {
       console.error('Error fetching reels:', error);
