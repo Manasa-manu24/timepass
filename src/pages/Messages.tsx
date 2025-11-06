@@ -223,9 +223,9 @@ const Messages = () => {
   // If a chat is selected, show the chat interface
   if (selectedChat) {
     return (
-      <div className="min-h-screen bg-background flex flex-col h-screen overflow-hidden">
+      <div className="fixed inset-0 bg-background flex flex-col">
         {/* Minimal header with only back button for mobile */}
-        <div className="lg:hidden flex-shrink-0 h-14 bg-card border-b border-border flex items-center px-4">
+        <div className="lg:hidden flex-shrink-0 h-14 bg-card border-b border-border flex items-center px-4 z-10">
           <Button
             variant="ghost"
             size="icon"
@@ -251,7 +251,7 @@ const Messages = () => {
         <DesktopSidebar />
         
         {/* Chat interface fills remaining height */}
-        <main className="lg:ml-64 xl:ml-72 flex-1 pt-0 lg:pt-0 flex flex-col overflow-hidden">
+        <main className="lg:ml-64 xl:ml-72 flex-1 flex flex-col min-h-0">
           <ChatInterface
             recipientId={selectedChat.uid}
             recipientUsername={selectedChat.username}

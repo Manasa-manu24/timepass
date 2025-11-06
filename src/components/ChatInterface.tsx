@@ -17,7 +17,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { AiOutlineSend, AiOutlineArrowLeft } from 'react-icons/ai';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -137,7 +136,7 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full min-h-0 bg-background">
       {/* Header - Only show on desktop, hidden on mobile (parent Messages.tsx has header) */}
       <div className="hidden lg:flex flex-shrink-0 items-center gap-3 p-4 border-b border-border bg-card">
         <Button
@@ -161,9 +160,9 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
         </Link>
       </div>
 
-      {/* Messages - Scrollable area */}
-      <ScrollArea className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-4 pb-4">
+      {/* Messages - Scrollable area that takes remaining space */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No messages yet</p>
@@ -198,12 +197,12 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
           )}
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
-      {/* Message Input - Fixed at bottom, safe area for mobile keyboards */}
+      {/* Message Input - Fixed at bottom */}
       <form 
         onSubmit={handleSendMessage} 
-        className="flex-shrink-0 p-4 border-t border-border bg-card safe-bottom"
+        className="flex-shrink-0 p-4 border-t border-border bg-card"
       >
         <div className="flex items-center gap-2">
           <Input
