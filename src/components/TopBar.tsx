@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { AiOutlineHeart, AiOutlineSend } from 'react-icons/ai';
+import { Link, useNavigate } from 'react-router-dom';
+import { AiOutlineHeart, AiOutlineSend, AiOutlineArrowLeft } from 'react-icons/ai';
 import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,10 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 
-const TopBar = ({ title }: { title?: string }) => {
+const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: boolean }) => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [notificationCount, setNotificationCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
 
@@ -41,10 +42,21 @@ const TopBar = ({ title }: { title?: string }) => {
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card/95 backdrop-blur-md border-b border-border z-50">
       <div className="flex items-center justify-between h-full px-4">
-        {/* Logo */}
-        <Link to="/" className="text-xl font-bold">
-          Timepass
-        </Link>
+        {/* Left - Back Button or Logo */}
+        {showBackButton ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            aria-label="Back to home"
+          >
+            <AiOutlineArrowLeft size={24} />
+          </Button>
+        ) : (
+          <Link to="/" className="text-xl font-bold">
+            Timepass
+          </Link>
+        )}
 
         {/* Center - Optional Title */}
         {title && (

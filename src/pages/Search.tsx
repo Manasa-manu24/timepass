@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Link } from 'react-router-dom';
 import { Search as SearchIcon } from 'lucide-react';
+import { AiOutlineArrowLeft } from 'react-icons/ai';
 
 interface User {
   uid: string;
@@ -26,6 +29,7 @@ interface Post {
 }
 
 const Search = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -83,11 +87,24 @@ const Search = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar title="Search" />
+      <TopBar showBackButton />
       <DesktopSidebar />
       
       <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0 pb-20 lg:pb-0">
         <div className="max-w-4xl mx-auto p-4">
+          {/* Desktop Back Button */}
+          <div className="hidden lg:flex items-center gap-3 mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              aria-label="Back to home"
+            >
+              <AiOutlineArrowLeft size={24} />
+            </Button>
+            <h1 className="text-xl font-semibold">Search</h1>
+          </div>
+
           {/* Search Input */}
           <div className="relative mb-6">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />

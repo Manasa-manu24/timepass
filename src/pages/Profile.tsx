@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,9 @@ import EditProfileDialog from '@/components/EditProfileDialog';
 import PostViewerModal from '@/components/PostViewerModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { BsGrid3X3 } from 'react-icons/bs';
+import { AiOutlineSend, AiOutlineShareAlt } from 'react-icons/ai';
 import { toast } from 'sonner';
 
 interface UserProfile {
@@ -38,6 +40,7 @@ interface Post {
 
 const Profile = () => {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -153,10 +156,51 @@ const Profile = () => {
     }
   };
 
+  const handleMessage = () => {
+    if (!userId || !profile) return;
+    // Navigate to messages page - the Messages component will handle opening the chat
+    navigate('/messages', { 
+      state: { 
+        selectedUser: {
+          uid: userId,
+          username: profile.username,
+          email: '', // Not needed for chat
+          profilePicUrl: profile.profilePicUrl
+        }
+      }
+    });
+  };
+
+  const handleShareProfile = async () => {
+    const profileUrl = `${window.location.origin}/profile/${userId}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${profile?.username}'s profile`,
+          text: `Check out ${profile?.username} on Timepass`,
+          url: profileUrl,
+        });
+        toast.success('Profile shared successfully!');
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback to copying link
+      try {
+        await navigator.clipboard.writeText(profileUrl);
+        toast.success('Profile link copied to clipboard!');
+      } catch (error) {
+        console.error('Error copying link:', error);
+        toast.error('Failed to copy link');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopBar title="Profile" />
+        <TopBar />
         <DesktopSidebar />
         <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0">
           <div className="flex items-center justify-center py-12">
@@ -171,7 +215,7 @@ const Profile = () => {
   if (!profile) {
     return (
       <div className="min-h-screen bg-background">
-        <TopBar title="Profile" />
+        <TopBar />
         <DesktopSidebar />
         <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0">
           <div className="flex items-center justify-center py-12">
@@ -187,7 +231,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar title={profile.username} />
+      <TopBar />
       <DesktopSidebar />
       
       <main className="lg:ml-64 xl:ml-72 max-w-4xl mx-auto pt-14 lg:pt-8 pb-20 lg:pb-8 px-4">
@@ -203,16 +247,7 @@ const Profile = () => {
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-4">
               <h1 className="text-2xl font-light">{profile.username}</h1>
-              {isOwnProfile ? (
-                <EditProfileDialog
-                  userId={userId!}
-                  currentUsername={profile.username}
-                  currentDisplayName={profile.displayName}
-                  currentBio={profile.bio}
-                  currentProfilePic={profile.profilePicUrl}
-                  onProfileUpdate={fetchProfile}
-                />
-              ) : (
+              {!isOwnProfile && (
                 <Button
                   variant={isFollowing ? "outline" : "default"}
                   onClick={handleFollow}
@@ -245,6 +280,61 @@ const Profile = () => {
               <p className="text-sm">{profile.bio}</p>
             </div>
           </div>
+        </div>
+
+        {/* Action Buttons Section - Before Posts */}
+        <div className="mb-8 pb-8 border-b border-border">
+          {isOwnProfile ? (
+            // Own Profile: Edit Profile and Share Profile
+            <div className="flex gap-3 justify-center md:justify-start">
+              <EditProfileDialog
+                userId={userId!}
+                currentUsername={profile.username}
+                currentDisplayName={profile.displayName}
+                currentBio={profile.bio}
+                currentProfilePic={profile.profilePicUrl}
+                onProfileUpdate={fetchProfile}
+              />
+              <Button
+                variant="outline"
+                onClick={handleShareProfile}
+                className="flex items-center gap-2 flex-1 md:flex-initial"
+              >
+                <AiOutlineShareAlt size={18} />
+                Share Profile
+              </Button>
+            </div>
+          ) : (
+            // Other User's Profile: Message Button and Following Status
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleMessage}
+                  className="flex items-center gap-2 flex-1"
+                >
+                  <AiOutlineSend size={18} />
+                  Message
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleShareProfile}
+                  className="flex items-center gap-2"
+                >
+                  <AiOutlineShareAlt size={18} />
+                </Button>
+              </div>
+              {isFollowing && (
+                <div className="flex items-center justify-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    Following
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    You are following this user
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Posts Grid */}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +7,8 @@ import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { AiOutlineArrowLeft } from 'react-icons/ai';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Notification {
@@ -22,6 +25,7 @@ interface Notification {
 
 const Notifications = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,11 +76,25 @@ const Notifications = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar title="Notifications" />
+      <TopBar showBackButton />
       <DesktopSidebar />
       
       <main className="lg:ml-64 xl:ml-72 max-w-2xl mx-auto pt-14 lg:pt-0 pb-20 lg:pb-0">
-        <div className="border-b border-border p-4">
+        {/* Desktop Back Button */}
+        <div className="hidden lg:flex items-center gap-3 p-4 border-b border-border">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            aria-label="Back to home"
+          >
+            <AiOutlineArrowLeft size={24} />
+          </Button>
+          <h1 className="text-xl font-semibold">Notifications</h1>
+        </div>
+
+        {/* Mobile Title */}
+        <div className="lg:hidden border-b border-border p-4">
           <h1 className="text-xl font-semibold">Notifications</h1>
         </div>
 

@@ -1,10 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import ReelPlayer from '@/components/ReelPlayer';
+import { Button } from '@/components/ui/button';
+import { AiOutlineArrowLeft } from 'react-icons/ai';
 
 interface Reel {
   id: string;
@@ -20,6 +23,7 @@ interface Reel {
 }
 
 const Reels = () => {
+  const navigate = useNavigate();
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -100,8 +104,21 @@ const Reels = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar title="Reels" />
+      <TopBar showBackButton />
       <DesktopSidebar />
+      
+      {/* Desktop Back Button - Fixed position on RIGHT side */}
+      <div className="hidden lg:block fixed top-4 right-4 z-50">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate('/')}
+          aria-label="Back to home"
+          className="bg-card/95 backdrop-blur-md hover:bg-accent"
+        >
+          <AiOutlineArrowLeft size={24} />
+        </Button>
+      </div>
       
       <main className="lg:ml-64 xl:ml-72">
         <div 

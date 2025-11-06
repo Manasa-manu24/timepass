@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Link } from 'react-router-dom';
 import { AiOutlineHeart, AiFillHeart, AiOutlineComment, AiOutlineSend } from 'react-icons/ai';
 import { BsBookmark, BsBookmarkFill, BsThreeDots } from 'react-icons/bs';
 import { MdOutlineReport } from 'react-icons/md';
@@ -180,7 +181,12 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
             <AvatarImage src={post.authorProfilePic} />
             <AvatarFallback>{post.authorUsername[0].toUpperCase()}</AvatarFallback>
           </Avatar>
-          <span className="font-semibold text-sm">{post.authorUsername}</span>
+          <Link 
+            to={`/profile/${post.authorId}`}
+            className="font-semibold text-sm hover:opacity-70 transition-opacity"
+          >
+            {post.authorUsername}
+          </Link>
         </div>
         
         <DropdownMenu>

@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import ChatInterface from '@/components/ChatInterface';
-import { AiOutlineSend, AiOutlineSearch } from 'react-icons/ai';
+import { AiOutlineSend, AiOutlineSearch, AiOutlineArrowLeft } from 'react-icons/ai';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { collection, query, getDocs, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
+import { collection, query, getDocs, doc, updateDoc, arrayUnion, arrayRemove, getDoc, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
 interface User {
@@ -21,12 +23,24 @@ interface User {
   following?: string[];
 }
 
+interface Chat {
+  chatId: string;
+  otherUser: User;
+  lastMessage: string;
+  lastMessageTime: any;
+  lastMessageSender: string;
+}
+
 const Messages = () => {
   const { user: currentUser } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
+  const [chatsLoading, setChatsLoading] = useState(false);
   const [followingUsers, setFollowingUsers] = useState<string[]>([]);
   const [followingInProgress, setFollowingInProgress] = useState<string[]>([]);
   const [selectedChat, setSelectedChat] = useState<User | null>(null);
@@ -34,6 +48,12 @@ const Messages = () => {
   useEffect(() => {
     fetchUsers();
     fetchCurrentUserFollowing();
+    fetchChats();
+    
+    // Check if navigated from profile with a selected user
+    if (location.state?.selectedUser) {
+      setSelectedChat(location.state.selectedUser);
+    }
   }, []);
 
   useEffect(() => {
@@ -79,6 +99,68 @@ const Messages = () => {
       }
     } catch (error) {
       console.error('Error fetching following:', error);
+    }
+  };
+
+  const fetchChats = async () => {
+    if (!currentUser) return;
+    
+    setChatsLoading(true);
+    try {
+      // Get all chats where current user is a participant
+      const chatsQuery = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', currentUser.uid)
+      );
+      const chatsSnapshot = await getDocs(chatsQuery);
+      
+      const chatsData: Chat[] = [];
+      
+      for (const chatDoc of chatsSnapshot.docs) {
+        const chatData = chatDoc.data();
+        
+        // Get the other user's ID
+        const otherUserId = chatData.participants.find((id: string) => id !== currentUser.uid);
+        
+        if (otherUserId) {
+          // Fetch the other user's data
+          const userDoc = await getDoc(doc(db, 'users', otherUserId));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            chatsData.push({
+              chatId: chatDoc.id,
+              otherUser: {
+                uid: otherUserId,
+                username: userData.username || 'Unknown',
+                email: userData.email || '',
+                profilePicUrl: userData.profilePicUrl
+              },
+              lastMessage: chatData.lastMessage || '',
+              lastMessageTime: chatData.lastMessageTime,
+              lastMessageSender: chatData.lastMessageSender || ''
+            });
+          }
+        }
+      }
+      
+      // Sort by last message time (most recent first)
+      chatsData.sort((a, b) => {
+        if (!a.lastMessageTime) return 1;
+        if (!b.lastMessageTime) return -1;
+        
+        const aTime = a.lastMessageTime.toDate ? a.lastMessageTime.toDate() : new Date(a.lastMessageTime);
+        const bTime = b.lastMessageTime.toDate ? b.lastMessageTime.toDate() : new Date(b.lastMessageTime);
+        
+        return bTime.getTime() - aTime.getTime();
+      });
+      
+      setChats(chatsData);
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+    } finally {
+      setChatsLoading(false);
     }
   };
 
@@ -134,13 +216,15 @@ const Messages = () => {
 
   const handleBackToList = () => {
     setSelectedChat(null);
+    // Refresh chats when returning from a conversation
+    fetchChats();
   };
 
   // If a chat is selected, show the chat interface
   if (selectedChat) {
     return (
       <div className="min-h-screen bg-background">
-        <TopBar title={selectedChat.username} />
+        <TopBar title={selectedChat.username} showBackButton />
         <DesktopSidebar />
         
         <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0 pb-0 lg:pb-0 h-screen">
@@ -159,11 +243,24 @@ const Messages = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar title="Messages" />
+      <TopBar showBackButton />
       <DesktopSidebar />
       
       <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0 pb-20 lg:pb-0">
         <div className="max-w-4xl mx-auto">
+          {/* Desktop Back Button */}
+          <div className="hidden lg:flex items-center gap-3 p-4 border-b border-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              aria-label="Back to home"
+            >
+              <AiOutlineArrowLeft size={24} />
+            </Button>
+            <h1 className="text-xl font-semibold">Messages</h1>
+          </div>
+
           {/* Search Bar */}
           <div className="sticky top-0 lg:top-0 bg-background border-b border-border p-4 z-10">
             <div className="relative">
@@ -245,17 +342,70 @@ const Messages = () => {
                 </div>
               )
             ) : (
-              // Empty State
-              <div className="text-center py-12">
-                <AiOutlineSend size={64} className="mx-auto text-muted-foreground mb-4" />
-                <h2 className="text-xl font-semibold mb-2">Your Messages</h2>
-                <p className="text-muted-foreground mb-4">
-                  Send private messages to friends
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Search for users above to start a conversation
-                </p>
-              </div>
+              // Conversations List or Empty State
+              chatsLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">Loading conversations...</p>
+                </div>
+              ) : chats.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Your Conversations
+                  </p>
+                  {chats.map((chat) => {
+                    const getTimestampDate = (timestamp: any): Date => {
+                      if (!timestamp) return new Date();
+                      if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+                        return timestamp.toDate();
+                      }
+                      if (timestamp instanceof Date) return timestamp;
+                      return new Date(timestamp);
+                    };
+
+                    const isOwnMessage = chat.lastMessageSender === currentUser?.uid;
+                    const lastMessagePreview = chat.lastMessage.length > 50 
+                      ? chat.lastMessage.substring(0, 50) + '...' 
+                      : chat.lastMessage;
+
+                    return (
+                      <div
+                        key={chat.chatId}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition cursor-pointer"
+                        onClick={() => handleStartChat(chat.otherUser)}
+                      >
+                        <Avatar className="w-12 h-12">
+                          <AvatarImage src={chat.otherUser.profilePicUrl} />
+                          <AvatarFallback>
+                            {chat.otherUser.username[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{chat.otherUser.username}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {isOwnMessage ? 'You: ' : ''}{lastMessagePreview}
+                          </p>
+                        </div>
+                        {chat.lastMessageTime && (
+                          <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(getTimestampDate(chat.lastMessageTime), { addSuffix: false })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <AiOutlineSend size={64} className="mx-auto text-muted-foreground mb-4" />
+                  <h2 className="text-xl font-semibold mb-2">Your Messages</h2>
+                  <p className="text-muted-foreground mb-4">
+                    Send private messages to friends
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Search for users above to start a conversation
+                  </p>
+                </div>
+              )
             )}
           </div>
         </div>
