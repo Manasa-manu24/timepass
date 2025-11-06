@@ -41,14 +41,14 @@ const MobileBottomNav = () => {
             <AiOutlineSearch size={28} />
           </Link>
 
-          {/* Upload FAB - Center */}
+          {/* Create/Upload Button */}
           <button
             onClick={() => setUploadOpen(true)}
-            className="w-14 h-14 -mt-8 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-400 shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+            className="flex items-center justify-center w-14 h-14 hover:opacity-70 transition"
             aria-label="Upload content"
             role="tab"
           >
-            <AiOutlinePlusCircle size={32} className="text-white" />
+            <AiOutlinePlusCircle size={28} />
           </button>
 
           <Link 
@@ -58,7 +58,7 @@ const MobileBottomNav = () => {
             role="tab"
             aria-selected={isActive('/reels')}
           >
-            {isActive('/reels') ? <BsCameraReelsFill size={24} /> : <BsCameraReels size={24} />}
+            {isActive('/reels') ? <BsCameraReelsFill size={28} /> : <BsCameraReels size={28} />}
           </Link>
 
           <Link 

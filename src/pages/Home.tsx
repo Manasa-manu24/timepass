@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
+import Stories from '@/components/Stories';
 import PostCard from '@/components/PostCard';
 
 interface Post {
@@ -131,27 +132,33 @@ const Home = () => {
       <TopBar />
       <DesktopSidebar />
       
-      <main className="lg:ml-64 xl:ml-72 max-w-2xl mx-auto pt-14 lg:pt-0 pb-20 lg:pb-8 px-4">
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading posts...</p>
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
-          </div>
-        ) : (
-          posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              currentUserId={user?.uid}
-              onLike={handleLike}
-              savedPosts={savedPosts}
-              onSaveToggle={handleSaveToggle}
-            />
-          ))
-        )}
+      <main className="lg:ml-64 xl:ml-72 max-w-2xl mx-auto pt-14 lg:pt-0 pb-20 lg:pb-8">
+        {/* Stories Section */}
+        <Stories />
+        
+        {/* Posts Section */}
+        <div className="px-4">
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading posts...</p>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
+            </div>
+          ) : (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUserId={user?.uid}
+                onLike={handleLike}
+                savedPosts={savedPosts}
+                onSaveToggle={handleSaveToggle}
+              />
+            ))
+          )}
+        </div>
       </main>
 
       <MobileBottomNav />

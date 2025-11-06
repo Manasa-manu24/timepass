@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { AiOutlineHome, AiFillHome, AiOutlineCompass, AiOutlineSetting, AiOutlineLogout } from 'react-icons/ai';
+import { AiOutlineHome, AiFillHome, AiOutlineSetting, AiOutlineLogout } from 'react-icons/ai';
 import { BsCameraReels, BsCameraReelsFill, BsBookmark, BsBookmarkFill } from 'react-icons/bs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,7 +66,6 @@ const DesktopSidebar = () => {
             <NavItem to="/" icon={AiOutlineHome} activeIcon={AiFillHome} label="Home" />
             <NavItem to="/search" icon={Search} label="Search" />
             <NavItem to="/reels" icon={BsCameraReels} activeIcon={BsCameraReelsFill} label="Reels" />
-            <NavItem to="/explore" icon={AiOutlineCompass} label="Explore" />
             
             {/* Upload Button - Prominent */}
             <button

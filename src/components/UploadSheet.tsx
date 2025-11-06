@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,15 +15,23 @@ import { Progress } from '@/components/ui/progress';
 interface UploadSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultMode?: 'post' | 'reel' | 'story';
 }
 
-const UploadSheet = ({ open, onOpenChange }: UploadSheetProps) => {
+const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetProps) => {
   const { user } = useAuth();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [postType, setPostType] = useState<'post' | 'reel' | 'story'>('post');
+  const [postType, setPostType] = useState<'post' | 'reel' | 'story'>(defaultMode);
+
+  // Update postType when defaultMode changes
+  useEffect(() => {
+    if (open) {
+      setPostType(defaultMode);
+    }
+  }, [open, defaultMode]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
