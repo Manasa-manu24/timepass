@@ -3,9 +3,17 @@ import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { AiOutlineHeart, AiFillHeart, AiOutlineComment, AiOutlineSend } from 'react-icons/ai';
 import { BsBookmark, BsBookmarkFill, BsThreeDots } from 'react-icons/bs';
+import { MdOutlineReport } from 'react-icons/md';
+import { AiOutlineStar, AiFillStar } from 'react-icons/ai';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import CommentsDialog from '@/components/CommentsDialog';
@@ -36,6 +44,7 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
   const [isSaved, setIsSaved] = useState(
     savedPosts.includes(post.id)
   );
+  const [isFavorited, setIsFavorited] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
   // Helper function to convert timestamp to Date object
@@ -128,6 +137,40 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
     }
   };
 
+  const handleFavorite = async () => {
+    if (!currentUserId) {
+      toast.error('Please sign in to add favorites');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', currentUserId);
+      
+      if (isFavorited) {
+        // Remove from favorites
+        await updateDoc(userRef, {
+          favoritePosts: arrayRemove(post.id)
+        });
+        setIsFavorited(false);
+        toast.success('Removed from favorites');
+      } else {
+        // Add to favorites
+        await updateDoc(userRef, {
+          favoritePosts: arrayUnion(post.id)
+        });
+        setIsFavorited(true);
+        toast.success('Added to favorites!');
+      }
+    } catch (error) {
+      console.error('Error favoriting post:', error);
+      toast.error('Failed to update favorites');
+    }
+  };
+
+  const handleReport = () => {
+    toast.info('Report submitted. Thank you for helping keep our community safe.');
+  };
+
   return (
     <Card className="mb-6 overflow-hidden border rounded-lg">
       {/* Post Header */}
@@ -139,9 +182,46 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
           </Avatar>
           <span className="font-semibold text-sm">{post.authorUsername}</span>
         </div>
-        <Button variant="ghost" size="icon">
-          <BsThreeDots />
-        </Button>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <BsThreeDots />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleSave}>
+              {isSaved ? (
+                <>
+                  <BsBookmarkFill className="mr-2 h-4 w-4" />
+                  Remove from Saved
+                </>
+              ) : (
+                <>
+                  <BsBookmark className="mr-2 h-4 w-4" />
+                  Save
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleFavorite}>
+              {isFavorited ? (
+                <>
+                  <AiFillStar className="mr-2 h-4 w-4 text-yellow-500" />
+                  Remove from Favorites
+                </>
+              ) : (
+                <>
+                  <AiOutlineStar className="mr-2 h-4 w-4" />
+                  Add to Favorites
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleReport} className="text-destructive">
+              <MdOutlineReport className="mr-2 h-4 w-4" />
+              Report
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Post Media */}

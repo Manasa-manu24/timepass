@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
@@ -11,6 +11,7 @@ import PostViewerModal from '@/components/PostViewerModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { BsGrid3X3 } from 'react-icons/bs';
+import { toast } from 'sonner';
 
 interface UserProfile {
   uid: string;
@@ -43,6 +44,8 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -77,6 +80,25 @@ const Profile = () => {
     fetchProfile();
   }, [userId]);
 
+  useEffect(() => {
+    // Check if current user is following this profile
+    const checkFollowStatus = async () => {
+      if (!currentUser || !userId || currentUser.uid === userId) return;
+      
+      try {
+        const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (currentUserDoc.exists()) {
+          const following = currentUserDoc.data()?.following || [];
+          setIsFollowing(following.includes(userId));
+        }
+      } catch (error) {
+        console.error('Error checking follow status:', error);
+      }
+    };
+    
+    checkFollowStatus();
+  }, [currentUser, userId]);
+
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);
     setIsViewerOpen(true);
@@ -85,6 +107,50 @@ const Profile = () => {
   const handlePostDeleted = () => {
     // Refresh the profile to update posts
     fetchProfile();
+  };
+
+  const handleFollow = async () => {
+    if (!currentUser || !userId) {
+      toast.error('Please sign in to follow users');
+      return;
+    }
+
+    setFollowLoading(true);
+
+    try {
+      const currentUserRef = doc(db, 'users', currentUser.uid);
+      const targetUserRef = doc(db, 'users', userId);
+
+      if (isFollowing) {
+        // Unfollow
+        await updateDoc(currentUserRef, {
+          following: arrayRemove(userId)
+        });
+        await updateDoc(targetUserRef, {
+          followers: arrayRemove(currentUser.uid)
+        });
+        setIsFollowing(false);
+        toast.success('Unfollowed successfully');
+      } else {
+        // Follow
+        await updateDoc(currentUserRef, {
+          following: arrayUnion(userId)
+        });
+        await updateDoc(targetUserRef, {
+          followers: arrayUnion(currentUser.uid)
+        });
+        setIsFollowing(true);
+        toast.success('Followed successfully');
+      }
+
+      // Refresh profile to update follower counts
+      fetchProfile();
+    } catch (error) {
+      console.error('Error following/unfollowing user:', error);
+      toast.error('Failed to update follow status');
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   if (loading) {
@@ -147,7 +213,13 @@ const Profile = () => {
                   onProfileUpdate={fetchProfile}
                 />
               ) : (
-                <Button>Follow</Button>
+                <Button
+                  variant={isFollowing ? "outline" : "default"}
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                >
+                  {followLoading ? 'Loading...' : isFollowing ? 'Unfollow' : 'Follow'}
+                </Button>
               )}
             </div>
 

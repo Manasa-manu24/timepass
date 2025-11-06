@@ -12,6 +12,7 @@ import { AiOutlineCamera, AiOutlineVideoCamera, AiOutlineClose } from 'react-ico
 import { BsCameraReels } from 'react-icons/bs';
 import { Progress } from '@/components/ui/progress';
 import { doc, getDoc } from 'firebase/firestore';
+import CameraCapture from './CameraCapture';
 
 interface UploadModalProps {
   open: boolean;
@@ -25,6 +26,7 @@ const UploadModal = ({ open, onOpenChange }: UploadModalProps) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [postType, setPostType] = useState<'post' | 'reel' | 'story'>('post');
+  const [showCamera, setShowCamera] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -45,6 +47,15 @@ const UploadModal = ({ open, onOpenChange }: UploadModalProps) => {
 
   const removeFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCameraCapture = (file: File) => {
+    setSelectedFiles([file]);
+    setShowCamera(false);
+  };
+
+  const openCamera = () => {
+    setShowCamera(true);
   };
 
   const handleUpload = async () => {
@@ -103,62 +114,78 @@ const UploadModal = ({ open, onOpenChange }: UploadModalProps) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Post</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Post</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          <div className="flex gap-4">
-            <Button
-              variant={postType === 'post' ? 'default' : 'outline'}
-              onClick={() => setPostType('post')}
-              className="flex-1"
-            >
-              <AiOutlineCamera className="mr-2" size={20} />
-              Post
-            </Button>
-            <Button
-              variant={postType === 'reel' ? 'default' : 'outline'}
-              onClick={() => setPostType('reel')}
-              className="flex-1"
-            >
-              <BsCameraReels className="mr-2" size={20} />
-              Reel
-            </Button>
-            <Button
-              variant={postType === 'story' ? 'default' : 'outline'}
-              onClick={() => setPostType('story')}
-              className="flex-1"
-            >
-              <AiOutlineVideoCamera className="mr-2" size={20} />
-              Story
-            </Button>
-          </div>
+          <div className="space-y-6">
+            <div className="flex gap-4">
+              <Button
+                variant={postType === 'post' ? 'default' : 'outline'}
+                onClick={() => setPostType('post')}
+                className="flex-1"
+              >
+                <AiOutlineCamera className="mr-2" size={20} />
+                Post
+              </Button>
+              <Button
+                variant={postType === 'reel' ? 'default' : 'outline'}
+                onClick={() => setPostType('reel')}
+                className="flex-1"
+              >
+                <BsCameraReels className="mr-2" size={20} />
+                Reel
+              </Button>
+              <Button
+                variant={postType === 'story' ? 'default' : 'outline'}
+                onClick={() => setPostType('story')}
+                className="flex-1"
+              >
+                <AiOutlineVideoCamera className="mr-2" size={20} />
+                Story
+              </Button>
+            </div>
 
-          <div>
-            <Label htmlFor="file-upload-desktop" className="cursor-pointer">
-              <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:bg-accent transition">
-                <AiOutlineCamera size={64} className="mx-auto mb-4 text-muted-foreground" />
-                <p className="text-base text-muted-foreground mb-2">
-                  Drag photos and videos here
-                </p>
-                <p className="text-sm text-primary">or click to select from your computer</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Max 10 files, 100MB each
+            {/* File Upload Options */}
+            <div className="space-y-3">
+              {/* Gallery Upload */}
+              <div>
+                <Label htmlFor="file-upload-desktop" className="cursor-pointer">
+                  <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:bg-accent transition">
+                    <AiOutlineCamera size={64} className="mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-base text-muted-foreground mb-2">
+                      Drag photos and videos here
+                    </p>
+                    <p className="text-sm text-primary">or click to select from your computer</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Max 10 files, 100MB each
+                    </p>
+                  </div>
+                </Label>
+                <input
+                  id="file-upload-desktop"
+                  type="file"
+                  accept={postType === 'reel' ? 'video/*' : 'image/*,video/*'}
+                  multiple={postType !== 'reel'}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Live Camera Capture */}
+              <div 
+                onClick={openCamera}
+                className="cursor-pointer border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-accent transition"
+              >
+                <AiOutlineVideoCamera size={48} className="mx-auto mb-2 text-muted-foreground" />
+                <p className="text-base text-muted-foreground">
+                  Use Live Camera
                 </p>
               </div>
-            </Label>
-            <input
-              id="file-upload-desktop"
-              type="file"
-              accept={postType === 'reel' ? 'video/*' : 'image/*,video/*'}
-              multiple={postType !== 'reel'}
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-          </div>
+            </div>
 
           {selectedFiles.length > 0 && (
             <div className="grid grid-cols-4 gap-3">
@@ -230,6 +257,16 @@ const UploadModal = ({ open, onOpenChange }: UploadModalProps) => {
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Camera Capture Component */}
+    {showCamera && (
+      <CameraCapture
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+        captureMode={postType === 'reel' ? 'video' : 'photo'}
+      />
+    )}
+  </>
   );
 };
 

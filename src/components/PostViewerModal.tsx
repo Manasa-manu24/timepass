@@ -246,6 +246,24 @@ const PostViewerModal = ({
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!currentUserId) return;
+
+    try {
+      await deleteDoc(doc(db, 'comments', commentId));
+      
+      // Decrement comment count
+      await updateDoc(doc(db, 'posts', post.id), {
+        commentsCount: increment(-1)
+      });
+
+      toast.success('Comment deleted');
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Failed to delete comment');
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -328,7 +346,7 @@ const PostViewerModal = ({
 
                 {/* Comments List */}
                 {comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3 mb-4">
+                  <div key={comment.id} className="flex gap-3 mb-4 group">
                     <Avatar className="w-8 h-8 flex-shrink-0">
                       <AvatarImage src={comment.userProfilePic} />
                       <AvatarFallback>
@@ -344,6 +362,16 @@ const PostViewerModal = ({
                         {formatDistanceToNow(getTimestampDate(comment.timestamp), { addSuffix: true })}
                       </p>
                     </div>
+                    {/* Delete button - only for comment owner */}
+                    {comment.userId === currentUserId && (
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                        aria-label="Delete comment"
+                      >
+                        <BsThreeDots size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
 

@@ -1,14 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
-import { AiOutlineHome, AiFillHome, AiOutlineSetting, AiOutlineLogout } from 'react-icons/ai';
+import { AiOutlineHome, AiFillHome, AiOutlineSetting, AiOutlineLogout, AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { BsCameraReels, BsCameraReelsFill, BsBookmark, BsBookmarkFill } from 'react-icons/bs';
+import { IoChatbubbleOutline, IoChatbubble } from 'react-icons/io5';
+import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
 import UploadModal from './UploadModal';
 import { Search } from 'lucide-react';
 
 const DesktopSidebar = () => {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const location = useLocation();
   const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -66,6 +70,8 @@ const DesktopSidebar = () => {
             <NavItem to="/" icon={AiOutlineHome} activeIcon={AiFillHome} label="Home" />
             <NavItem to="/search" icon={Search} label="Search" />
             <NavItem to="/reels" icon={BsCameraReels} activeIcon={BsCameraReelsFill} label="Reels" />
+            <NavItem to="/messages" icon={IoChatbubbleOutline} activeIcon={IoChatbubble} label="Messages" />
+            <NavItem to="/notifications" icon={AiOutlineHeart} activeIcon={AiFillHeart} label="Notifications" />
             
             {/* Upload Button - Prominent */}
             <button
@@ -92,6 +98,25 @@ const DesktopSidebar = () => {
 
           {/* Bottom Actions */}
           <div className="space-y-1 border-t border-border pt-3">
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="w-full text-left"
+              aria-label="Toggle theme"
+            >
+              <div className="flex items-center gap-4 px-3 py-3 rounded-lg hover:bg-accent transition-colors">
+                {theme === 'dark' ? (
+                  <>
+                    <MdOutlineLightMode size={28} />
+                    <span className="text-base">Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <MdOutlineDarkMode size={28} />
+                    <span className="text-base">Dark Mode</span>
+                  </>
+                )}
+              </div>
+            </button>
             <NavItem to="/settings" icon={AiOutlineSetting} label="Settings" />
             <NavItem icon={AiOutlineLogout} label="Logout" onClick={signOut} />
           </div>

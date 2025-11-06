@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { AiOutlineCamera, AiOutlineClose, AiOutlineReload } from 'react-icons/ai';
+import { AiOutlineCamera, AiOutlineClose, AiOutlineReload, AiOutlineCheck } from 'react-icons/ai';
 import { BsCameraVideo, BsCameraVideoOff } from 'react-icons/bs';
+import { MdRefresh } from 'react-icons/md';
 import { toast } from 'sonner';
 
 interface CameraCaptureProps {
@@ -18,6 +19,8 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
 
   useEffect(() => {
     startCamera();
@@ -66,9 +69,11 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
       ctx.drawImage(videoRef.current, 0, 0);
       canvas.toBlob((blob) => {
         if (blob) {
-          setCapturedImage(URL.createObjectURL(blob));
+          const imageUrl = URL.createObjectURL(blob);
           const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
-          onCapture(file);
+          
+          setCapturedImage(imageUrl);
+          setCapturedFile(file);
           stopCamera();
         }
       }, 'image/jpeg', 0.95);
@@ -92,7 +97,10 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
       const file = new File([blob], `video-${Date.now()}.webm`, { type: 'video/webm' });
-      onCapture(file);
+      const videoUrl = URL.createObjectURL(blob);
+      
+      setCapturedVideo(videoUrl);
+      setCapturedFile(file);
       stopCamera();
     };
 
@@ -124,13 +132,32 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
     }
   };
 
+  const handleRetake = () => {
+    setCapturedImage(null);
+    setCapturedVideo(null);
+    setCapturedFile(null);
+    startCamera();
+  };
+
+  const handleShare = () => {
+    if (capturedFile) {
+      onCapture(capturedFile);
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black">
       {/* Camera View */}
       <div className="relative w-full h-full flex items-center justify-center">
         {capturedImage ? (
+          // Preview captured photo
           <img src={capturedImage} alt="Captured" className="max-w-full max-h-full object-contain" />
+        ) : capturedVideo ? (
+          // Preview captured video
+          <video src={capturedVideo} controls className="max-w-full max-h-full object-contain" autoPlay loop />
         ) : (
+          // Live camera view
           <video
             ref={videoRef}
             autoPlay
@@ -151,7 +178,7 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
             <AiOutlineClose size={24} />
           </Button>
 
-          {!capturedImage && (
+          {!capturedImage && !capturedVideo && (
             <Button
               variant="ghost"
               size="icon"
@@ -163,8 +190,8 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
           )}
         </div>
 
-        {/* Bottom Controls */}
-        {!capturedImage && (
+        {/* Bottom Controls - Live Camera */}
+        {!capturedImage && !capturedVideo && (
           <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-center items-center bg-gradient-to-t from-black/60 to-transparent">
             <Button
               onClick={handleCapture}
@@ -188,18 +215,50 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
           </div>
         )}
 
+        {/* Bottom Controls - Preview Mode */}
+        {(capturedImage || capturedVideo) && (
+          <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-center items-center gap-8 bg-gradient-to-t from-black/60 to-transparent">
+            {/* Retake Button */}
+            <Button
+              onClick={handleRetake}
+              size="icon"
+              className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 text-white border-2 border-white"
+            >
+              <MdRefresh size={28} />
+            </Button>
+
+            {/* Share/Use Button */}
+            <Button
+              onClick={handleShare}
+              size="icon"
+              className="w-20 h-20 rounded-full bg-primary hover:bg-primary/90"
+            >
+              <AiOutlineCheck size={36} />
+            </Button>
+          </div>
+        )}
+
         {/* Recording Indicator */}
         {isRecording && (
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full flex items-center gap-2">
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full flex items-center gap-2 animate-pulse">
             <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
             <span className="font-semibold">Recording...</span>
           </div>
         )}
 
-        {/* Mode Indicator */}
-        <div className="absolute top-20 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
-          {captureMode === 'video' ? 'Video Mode' : 'Photo Mode'}
-        </div>
+        {/* Mode Indicator - Only show during live camera */}
+        {!capturedImage && !capturedVideo && (
+          <div className="absolute top-20 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+            {captureMode === 'video' ? 'Video Mode' : 'Photo Mode'}
+          </div>
+        )}
+
+        {/* Preview Instructions */}
+        {(capturedImage || capturedVideo) && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full text-sm">
+            Preview - Retake or Share
+          </div>
+        )}
       </div>
     </div>
   );

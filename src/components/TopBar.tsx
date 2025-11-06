@@ -1,13 +1,17 @@
 import { Link } from 'react-router-dom';
 import { AiOutlineHeart, AiOutlineSend } from 'react-icons/ai';
+import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from 'next-themes';
 
 const TopBar = ({ title }: { title?: string }) => {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [notificationCount, setNotificationCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
 
@@ -47,8 +51,22 @@ const TopBar = ({ title }: { title?: string }) => {
           <h1 className="text-base font-semibold">{title}</h1>
         )}
 
-        {/* Right - Notifications & Messages */}
-        <div className="flex items-center gap-4">
+        {/* Right - Theme Toggle, Notifications & Messages */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="hover:bg-accent"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <MdOutlineLightMode size={22} />
+            ) : (
+              <MdOutlineDarkMode size={22} />
+            )}
+          </Button>
+
           <Link 
             to="/notifications" 
             className="relative hover:opacity-70 transition"
