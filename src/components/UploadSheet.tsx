@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AiOutlineCamera, AiOutlineVideoCamera, AiOutlineClose } from 'react-icons/ai';
 import { BsCameraReels } from 'react-icons/bs';
 import { Progress } from '@/components/ui/progress';
+import CameraCapture from './CameraCapture';
 
 interface UploadSheetProps {
   open: boolean;
@@ -25,6 +26,7 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [postType, setPostType] = useState<'post' | 'reel' | 'story'>(defaultMode);
+  const [showCamera, setShowCamera] = useState(false);
 
   // Update postType when defaultMode changes
   useEffect(() => {
@@ -53,6 +55,15 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
 
   const removeFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCameraCapture = (file: File) => {
+    setSelectedFiles([file]);
+    setShowCamera(false);
+  };
+
+  const openCamera = () => {
+    setShowCamera(true);
   };
 
   const handleUpload = async () => {
@@ -117,11 +128,12 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl">
-        <SheetHeader>
-          <SheetTitle>Create New Post</SheetTitle>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>Create New Post</SheetTitle>
+          </SheetHeader>
 
         <div className="mt-6 space-y-6">
           {/* Post Type Selection */}
@@ -153,7 +165,8 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
           </div>
 
           {/* File Input */}
-          <div>
+          <div className="space-y-2">
+            {/* Gallery Upload */}
             <Label htmlFor="file-upload" className="cursor-pointer">
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-accent transition">
                 <AiOutlineCamera size={48} className="mx-auto mb-2 text-muted-foreground" />
@@ -173,6 +186,17 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
               onChange={handleFileSelect}
               className="hidden"
             />
+
+            {/* Camera Capture */}
+            <div 
+              onClick={openCamera}
+              className="cursor-pointer border-2 border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition"
+            >
+              <AiOutlineVideoCamera size={32} className="mx-auto mb-1 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Live Camera Capture
+              </p>
+            </div>
           </div>
 
           {/* Selected Files Preview */}
@@ -242,6 +266,16 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Camera Capture Component */}
+    {showCamera && (
+      <CameraCapture
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+        captureMode={postType === 'reel' ? 'video' : 'photo'}
+      />
+    )}
+  </>
   );
 };
 

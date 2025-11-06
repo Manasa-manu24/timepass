@@ -7,6 +7,7 @@ import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import EditProfileDialog from '@/components/EditProfileDialog';
+import PostViewerModal from '@/components/PostViewerModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { BsGrid3X3 } from 'react-icons/bs';
@@ -23,9 +24,15 @@ interface UserProfile {
 
 interface Post {
   id: string;
+  authorId: string;
+  authorUsername: string;
+  authorProfilePic?: string;
+  caption?: string;
   mediaUrl: string;
+  mediaType: 'image' | 'video';
   likes: string[];
   commentsCount: number;
+  timestamp: any;
 }
 
 const Profile = () => {
@@ -34,6 +41,8 @@ const Profile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -67,6 +76,16 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
   }, [userId]);
+
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setIsViewerOpen(true);
+  };
+
+  const handlePostDeleted = () => {
+    // Refresh the profile to update posts
+    fetchProfile();
+  };
 
   if (loading) {
     return (
@@ -175,6 +194,7 @@ const Profile = () => {
                 <div
                   key={post.id}
                   className="aspect-square bg-secondary cursor-pointer group relative overflow-hidden"
+                  onClick={() => handlePostClick(post)}
                 >
                   <img
                     src={post.mediaUrl}
@@ -200,6 +220,18 @@ const Profile = () => {
       </main>
 
       <MobileBottomNav />
+
+      <PostViewerModal
+        post={selectedPost}
+        isOpen={isViewerOpen}
+        onClose={() => {
+          setIsViewerOpen(false);
+          setSelectedPost(null);
+        }}
+        currentUserId={currentUser?.uid}
+        isOwnPost={isOwnProfile}
+        onPostDeleted={handlePostDeleted}
+      />
     </div>
   );
 };
