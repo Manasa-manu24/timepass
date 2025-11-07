@@ -11,7 +11,7 @@ import PostViewerModal from '@/components/PostViewerModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BsGrid3X3 } from 'react-icons/bs';
+import { BsGrid3X3, BsCameraReels } from 'react-icons/bs';
 import { AiOutlineSend, AiOutlineShareAlt } from 'react-icons/ai';
 import { toast } from 'sonner';
 
@@ -358,12 +358,27 @@ const Profile = () => {
                   className="aspect-square bg-secondary cursor-pointer group relative overflow-hidden"
                   onClick={() => handlePostClick(post)}
                 >
-                  <img
-                    src={post.mediaUrl}
-                    alt="Post"
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  {post.mediaType === 'video' ? (
+                    <>
+                      <video
+                        src={post.mediaUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                      />
+                      {/* Video/Reel indicator overlay */}
+                      <div className="absolute top-2 right-2 z-10">
+                        <BsCameraReels className="text-white drop-shadow-lg" size={20} />
+                      </div>
+                    </>
+                  ) : (
+                    <img
+                      src={post.mediaUrl}
+                      alt="Post"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white">
                     <div className="flex items-center gap-2">
                       <span>❤️</span>

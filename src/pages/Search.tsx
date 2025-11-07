@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Link } from 'react-router-dom';
-import { Search as SearchIcon } from 'lucide-react';
+import { Search as SearchIcon, Clock, X } from 'lucide-react';
 import { AiOutlineArrowLeft } from 'react-icons/ai';
 
 interface User {
@@ -30,10 +31,57 @@ interface Post {
 
 const Search = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // Load search history from localStorage on mount
+  useEffect(() => {
+    if (user) {
+      const historyKey = `search_history_${user.uid}`;
+      const savedHistory = localStorage.getItem(historyKey);
+      if (savedHistory) {
+        setSearchHistory(JSON.parse(savedHistory));
+      }
+    }
+  }, [user]);
+
+  // Save search to history
+  const saveToHistory = (query: string) => {
+    if (!user || !query.trim()) return;
+    
+    const historyKey = `search_history_${user.uid}`;
+    const updatedHistory = [
+      query.trim(),
+      ...searchHistory.filter(item => item !== query.trim())
+    ].slice(0, 10); // Keep only last 10 searches
+    
+    setSearchHistory(updatedHistory);
+    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+  };
+
+  // Remove item from history
+  const removeFromHistory = (query: string) => {
+    if (!user) return;
+    
+    const historyKey = `search_history_${user.uid}`;
+    const updatedHistory = searchHistory.filter(item => item !== query);
+    
+    setSearchHistory(updatedHistory);
+    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+  };
+
+  // Clear all history
+  const clearHistory = () => {
+    if (!user) return;
+    
+    const historyKey = `search_history_${user.uid}`;
+    setSearchHistory([]);
+    localStorage.removeItem(historyKey);
+  };
 
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
@@ -45,6 +93,9 @@ const Search = () => {
     const searchData = async () => {
       setLoading(true);
       try {
+        // Save to history when user searches
+        saveToHistory(searchQuery);
+
         // Search users
         const usersQuery = query(
           collection(db, 'users'),
@@ -194,9 +245,55 @@ const Search = () => {
           )}
 
           {searchQuery.trim().length === 0 && (
-            <div className="text-center py-12">
-              <SearchIcon size={64} className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Search for users and posts</p>
+            <div className="space-y-6">
+              {/* Search History */}
+              {searchHistory.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Recent Searches</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearHistory}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Clear all
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {searchHistory.map((historyItem, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition group"
+                      >
+                        <Clock size={20} className="text-muted-foreground" />
+                        <button
+                          onClick={() => setSearchQuery(historyItem)}
+                          className="flex-1 text-left truncate"
+                        >
+                          {historyItem}
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFromHistory(historyItem)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={16} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {searchHistory.length === 0 && (
+                <div className="text-center py-12">
+                  <SearchIcon size={64} className="mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Search for users and posts</p>
+                </div>
+              )}
             </div>
           )}
         </div>

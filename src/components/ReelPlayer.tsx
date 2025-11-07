@@ -3,7 +3,7 @@ import { AiOutlineHeart, AiFillHeart, AiOutlineComment, AiOutlineSend } from 're
 import { BsThreeDots, BsVolumeMute, BsVolumeUp } from 'react-icons/bs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -65,6 +65,29 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           likes: arrayUnion(user.uid)
         });
         setIsLiked(true);
+
+        // Create notification for the reel author (if not liking own reel)
+        if (user.uid !== reel.authorId) {
+          try {
+            // Get current user's data for the notification
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const userData = userDoc.data();
+
+            await addDoc(collection(db, 'notifications'), {
+              userId: reel.authorId,
+              type: 'like',
+              senderId: user.uid,
+              senderUsername: userData?.username || user.email?.split('@')[0] || 'Someone',
+              senderProfilePic: userData?.profilePicUrl || '',
+              postId: reel.id,
+              postType: 'reel',
+              timestamp: serverTimestamp(),
+              read: false
+            });
+          } catch (notifError) {
+            console.error('Error creating notification:', notifError);
+          }
+        }
       }
     } catch (error) {
       console.error('Error updating like:', error);

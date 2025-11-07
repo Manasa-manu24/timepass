@@ -101,10 +101,11 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
 
     try {
       const messagesRef = collection(db, 'chats', chatId, 'messages');
+      const messageText = newMessage.trim();
       
       // Add message to subcollection
       await addDoc(messagesRef, {
-        text: newMessage.trim(),
+        text: messageText,
         senderId: user.uid,
         timestamp: serverTimestamp()
       });
@@ -112,10 +113,29 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
       // Update chat document with last message info
       const chatRef = doc(db, 'chats', chatId);
       await updateDoc(chatRef, {
-        lastMessage: newMessage.trim(),
+        lastMessage: messageText,
         lastMessageTime: serverTimestamp(),
         lastMessageSender: user.uid
       });
+
+      // Create notification for the recipient
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+
+        await addDoc(collection(db, 'notifications'), {
+          userId: recipientId,
+          type: 'message',
+          senderId: user.uid,
+          senderUsername: userData?.username || user.email?.split('@')[0] || 'Someone',
+          senderProfilePic: userData?.profilePicUrl || '',
+          messagePreview: messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText,
+          timestamp: serverTimestamp(),
+          read: false
+        });
+      } catch (notifError) {
+        console.error('Error creating message notification:', notifError);
+      }
 
       setNewMessage('');
     } catch (error) {

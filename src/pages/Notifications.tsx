@@ -14,11 +14,13 @@ import { formatDistanceToNow } from 'date-fns';
 interface Notification {
   id: string;
   userId: string;
-  type: 'like' | 'comment' | 'follow';
+  type: 'like' | 'comment' | 'follow' | 'message';
   senderId: string;
   senderUsername: string;
   senderProfilePic?: string;
   postId?: string;
+  postType?: 'post' | 'reel' | 'story';
+  messagePreview?: string;
   timestamp: any;
   read: boolean;
 }
@@ -64,13 +66,39 @@ const Notifications = () => {
   const getNotificationText = (notif: Notification) => {
     switch (notif.type) {
       case 'like':
+        if (notif.postType === 'reel') {
+          return 'liked your reel';
+        }
         return 'liked your post';
       case 'comment':
+        if (notif.postType === 'reel') {
+          return 'commented on your reel';
+        }
         return 'commented on your post';
       case 'follow':
         return 'started following you';
+      case 'message':
+        return notif.messagePreview ? `sent you a message: "${notif.messagePreview}"` : 'sent you a message';
       default:
         return '';
+    }
+  };
+
+  const handleNotificationClick = (notif: Notification) => {
+    markAsRead(notif.id);
+    
+    // Navigate based on notification type
+    if (notif.type === 'message') {
+      navigate('/messages');
+    } else if (notif.type === 'follow') {
+      navigate(`/profile/${notif.senderId}`);
+    } else if (notif.postId) {
+      // Navigate to post/reel
+      if (notif.postType === 'reel') {
+        navigate('/reels');
+      } else {
+        navigate('/');
+      }
     }
   };
 
@@ -111,7 +139,7 @@ const Notifications = () => {
             {notifications.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => !notif.read && markAsRead(notif.id)}
+                onClick={() => handleNotificationClick(notif)}
                 className={`flex items-center gap-3 p-4 border-b border-border hover:bg-accent transition cursor-pointer ${
                   !notif.read ? 'bg-accent/50' : ''
                 }`}

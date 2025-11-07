@@ -30,7 +30,7 @@ const Reels = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Query for reels (posts with video mediaType)
+    // Query for ALL video posts (reels from the entire website)
     const reelsQuery = query(
       collection(db, 'posts'),
       where('mediaType', '==', 'video')
@@ -42,35 +42,33 @@ const Reels = () => {
         ...doc.data()
       })) as Reel[];
       
-      // Filter for reels or videos posted as reels and sort client-side
-      const filteredReels = reelsData
-        .filter(reel => !reel.postType || reel.postType === 'reel')
-        .sort((a, b) => {
-          // Helper to convert timestamp to milliseconds
-          const getTime = (timestamp: any): number => {
-            if (!timestamp) return 0;
-            
-            // If it's a Firestore Timestamp object
-            if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
-              return timestamp.toDate().getTime();
-            }
-            
-            // If it's already a Date object
-            if (timestamp instanceof Date) {
-              return timestamp.getTime();
-            }
-            
-            // If it's a string or number, try to convert
-            const date = new Date(timestamp);
-            return isNaN(date.getTime()) ? 0 : date.getTime();
-          };
+      // Sort all video posts by timestamp (newest first)
+      const sortedReels = reelsData.sort((a, b) => {
+        // Helper to convert timestamp to milliseconds
+        const getTime = (timestamp: any): number => {
+          if (!timestamp) return 0;
           
-          const timeA = getTime(a.timestamp);
-          const timeB = getTime(b.timestamp);
-          return timeB - timeA; // Descending order (newest first)
-        });
+          // If it's a Firestore Timestamp object
+          if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate().getTime();
+          }
+          
+          // If it's already a Date object
+          if (timestamp instanceof Date) {
+            return timestamp.getTime();
+          }
+          
+          // If it's a string or number, try to convert
+          const date = new Date(timestamp);
+          return isNaN(date.getTime()) ? 0 : date.getTime();
+        };
+        
+        const timeA = getTime(a.timestamp);
+        const timeB = getTime(b.timestamp);
+        return timeB - timeA; // Descending order (newest first)
+      });
       
-      setReels(filteredReels);
+      setReels(sortedReels);
       setLoading(false);
     }, (error) => {
       console.error('Error fetching reels:', error);
@@ -103,44 +101,78 @@ const Reels = () => {
   }, [reels]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       <TopBar showBackButton />
       <DesktopSidebar />
       
-      {/* Desktop Back Button - Fixed position on RIGHT side */}
-      <div className="hidden lg:block fixed top-4 right-4 z-50">
+      {/* Desktop Back Button - Fixed position at top-right */}
+      <div className="hidden lg:block fixed top-6 right-6 z-50">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate('/')}
           aria-label="Back to home"
-          className="bg-card/95 backdrop-blur-md hover:bg-accent"
+          className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20"
         >
           <AiOutlineArrowLeft size={24} />
         </Button>
       </div>
       
-      <main className="lg:ml-64 xl:ml-72">
+      {/* Mobile Back Button - Fixed position at top-left below TopBar */}
+      <div className="lg:hidden fixed top-16 left-4 z-50">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate('/')}
+          aria-label="Back to home"
+          className="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white border border-white/20"
+        >
+          <AiOutlineArrowLeft size={24} />
+        </Button>
+      </div>
+
+      {/* Scroll indicator - Shows current reel position */}
+      {!loading && reels.length > 0 && (
+        <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-1">
+          {reels.map((_, index) => (
+            <div
+              key={index}
+              className={`w-1 h-8 rounded-full transition-all ${
+                currentIndex === index ? 'bg-white' : 'bg-white/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+      
+      <main className="lg:ml-64 xl:ml-72 relative bg-black">
         <div 
           ref={containerRef}
-          className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth pt-14 lg:pt-0"
-          style={{ scrollSnapType: 'y mandatory' }}
+          className="h-[100vh] overflow-y-scroll snap-y snap-mandatory scroll-smooth pt-14 lg:pt-0 pb-16 lg:pb-0 
+                     scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent hover:scrollbar-thumb-white/50"
+          style={{ 
+            scrollSnapType: 'y mandatory',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent'
+          }}
         >
           {loading ? (
-            <div className="h-screen flex items-center justify-center">
-              <p className="text-muted-foreground">Loading reels...</p>
+            <div className="h-[calc(100vh-3.5rem)] lg:h-screen flex items-center justify-center bg-black">
+              <p className="text-white">Loading reels...</p>
             </div>
           ) : reels.length === 0 ? (
-            <div className="h-screen flex items-center justify-center">
-              <p className="text-muted-foreground">No reels yet. Create one!</p>
+            <div className="h-[calc(100vh-3.5rem)] lg:h-screen flex items-center justify-center bg-black">
+              <div className="text-center">
+                <p className="text-white text-lg mb-4">No reels yet</p>
+                <Button onClick={() => navigate('/create')}>Create your first reel</Button>
+              </div>
             </div>
           ) : (
             reels.map((reel, index) => (
               <div
                 key={reel.id}
                 data-index={index}
-                className="reel-item h-screen snap-start"
-                style={{ scrollSnapAlign: 'start' }}
+                className="reel-item h-[calc(100vh-3.5rem)] lg:h-screen snap-start snap-always flex items-center justify-center"
               >
                 <ReelPlayer 
                   reel={reel} 

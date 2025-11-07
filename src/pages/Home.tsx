@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
@@ -113,6 +113,29 @@ const Home = () => {
         await updateDoc(postRef, {
           likes: arrayUnion(user.uid)
         });
+
+        // Create notification for the post author (if not liking own post)
+        if (user.uid !== post.authorId) {
+          try {
+            // Get current user's data for the notification
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const userData = userDoc.data();
+
+            await addDoc(collection(db, 'notifications'), {
+              userId: post.authorId,
+              type: 'like',
+              senderId: user.uid,
+              senderUsername: userData?.username || user.email?.split('@')[0] || 'Someone',
+              senderProfilePic: userData?.profilePicUrl || '',
+              postId: postId,
+              postType: post.postType || 'post',
+              timestamp: serverTimestamp(),
+              read: false
+            });
+          } catch (notifError) {
+            console.error('Error creating notification:', notifError);
+          }
+        }
       }
     } catch (error) {
       console.error('Error updating like:', error);
