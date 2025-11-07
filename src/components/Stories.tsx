@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -48,7 +48,7 @@ const Stories = () => {
       where('postType', '==', 'story')
     );
 
-    const unsubscribe = onSnapshot(storiesQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(storiesQuery, async (snapshot) => {
       const storiesData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -65,17 +65,43 @@ const Stories = () => {
         return storyDate > oneDayAgo;
       });
 
+      // Fetch missing usernames from user profiles
+      const storiesWithUsernames = await Promise.all(
+        recentStories.map(async (story) => {
+          // If story already has username, use it
+          if (story.username) return story;
+          
+          // Otherwise, fetch from users collection
+          try {
+            const userDoc = await getDoc(doc(db, 'users', story.userId));
+            const userData = userDoc.data();
+            return {
+              ...story,
+              username: userData?.username || userData?.displayName || 'User',
+              userProfilePic: story.userProfilePic || userData?.profilePicUrl || ''
+            };
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+            return { ...story, username: 'User' };
+          }
+        })
+      );
+
       // Group stories by user
-      const grouped = recentStories.reduce((acc, story) => {
+      const grouped = storiesWithUsernames.reduce((acc, story) => {
         const existing = acc.find(g => g.userId === story.userId);
         
         if (existing) {
           existing.stories.push(story);
+          // Update hasUnviewed if any story in the group is unviewed
+          if (!(story.viewed || []).includes(user?.uid || '')) {
+            existing.hasUnviewed = true;
+          }
         } else {
           acc.push({
             userId: story.userId,
             username: story.username || 'User',
-            userProfilePic: story.userProfilePic,
+            userProfilePic: story.userProfilePic || '',
             stories: [story],
             hasUnviewed: !(story.viewed || []).includes(user?.uid || '')
           });
@@ -184,6 +210,7 @@ const Stories = () => {
           <div className="flex gap-4 p-4 pb-3 overflow-x-auto">
             {/* Add Your Story / View Your Stories */}
             <button
+              key="user-story"
               onClick={handleUserStoryClick}
               className="flex flex-col items-center gap-2 flex-shrink-0"
               aria-label={userStories.length > 0 ? "View your story" : "Add your story"}

@@ -95,12 +95,19 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
         getDoc(doc(db, 'users', user.uid))
       );
       const userData = userDoc.data();
+      
+      // Determine username with fallback chain
+      const displayUsername = userData?.username || 
+                             userData?.displayName || 
+                             user.displayName || 
+                             user.email?.split('@')[0] || 
+                             'User';
 
       // Create post in Firestore
       await addDoc(collection(db, 'posts'), {
         authorId: user.uid,
-        authorUsername: userData?.username || user.email?.split('@')[0] || 'User',
-        authorProfilePic: userData?.profilePicUrl || '',
+        authorUsername: displayUsername,
+        authorProfilePic: userData?.profilePicUrl || user.photoURL || '',
         caption,
         mediaUrl: mediaUrls[0], // Primary media
         media: mediaUrls, // All media
@@ -113,8 +120,8 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
         ...(postType === 'story' && { 
           viewed: [],
           userId: user.uid,
-          username: userData?.username || user.email?.split('@')[0] || 'User',
-          userProfilePic: userData?.profilePicUrl || ''
+          username: displayUsername,
+          userProfilePic: userData?.profilePicUrl || user.photoURL || ''
         })
       });
 

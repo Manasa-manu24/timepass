@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BsGrid3X3, BsCameraReels } from 'react-icons/bs';
-import { AiOutlineSend, AiOutlineShareAlt } from 'react-icons/ai';
+import { AiOutlineSend, AiOutlineShareAlt, AiOutlineSetting } from 'react-icons/ai';
 import { toast } from 'sonner';
 
 interface UserProfile {
@@ -288,7 +288,7 @@ const Profile = () => {
         {/* Action Buttons Section - Before Posts */}
         <div className="mb-8 pb-8 border-b border-border">
           {isOwnProfile ? (
-            // Own Profile: Edit Profile and Share Profile
+            // Own Profile: Edit Profile, Settings (mobile), and Share Profile
             <div className="flex gap-3 justify-center md:justify-start">
               <EditProfileDialog
                 userId={userId!}
@@ -298,6 +298,14 @@ const Profile = () => {
                 currentProfilePic={profile.profilePicUrl}
                 onProfileUpdate={fetchProfile}
               />
+              <Button
+                variant="outline"
+                onClick={() => navigate('/settings')}
+                className="flex items-center gap-2 lg:hidden"
+              >
+                <AiOutlineSetting size={18} />
+                Settings
+              </Button>
               <Button
                 variant="outline"
                 onClick={handleShareProfile}
