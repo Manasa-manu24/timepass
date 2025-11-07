@@ -28,7 +28,7 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
   const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLiked, setIsLiked] = useState(user ? reel.likes.includes(user.uid) : false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Changed to false for unmuted by default
   const [hasViewed, setHasViewed] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 

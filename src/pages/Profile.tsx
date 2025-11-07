@@ -275,10 +275,11 @@ const Profile = () => {
             </div>
 
             {/* Bio */}
-            <div>
-              <p className="font-semibold">{profile.displayName}</p>
-              <p className="text-sm">{profile.bio}</p>
-            </div>
+            {profile.bio && (
+              <div>
+                <p className="text-sm">{profile.bio}</p>
+              </div>
+            )}
           </div>
         </div>
 
