@@ -54,9 +54,10 @@ const Stories = () => {
         ...doc.data()
       })) as Story[];
 
-      // Filter stories from last 24 hours
+      // Filter stories from last 24 hours and ensure they have valid userId
       const recentStories = storiesData.filter(story => {
-        if (!story.timestamp) return false;
+        // Must have timestamp and valid userId
+        if (!story.timestamp || !story.userId) return false;
         
         const storyDate = story.timestamp?.toDate ? 
           story.timestamp.toDate() : 
@@ -73,6 +74,11 @@ const Stories = () => {
           
           // Otherwise, fetch from users collection
           try {
+            // Double-check userId exists before fetching
+            if (!story.userId) {
+              return { ...story, username: 'User', userProfilePic: '' };
+            }
+            
             const userDoc = await getDoc(doc(db, 'users', story.userId));
             const userData = userDoc.data();
             return {
@@ -82,13 +88,16 @@ const Stories = () => {
             };
           } catch (error) {
             console.error('Error fetching user data:', error);
-            return { ...story, username: 'User' };
+            return { ...story, username: 'User', userProfilePic: '' };
           }
         })
       );
 
-      // Group stories by user
+      // Group stories by user (filter out stories without userId)
       const grouped = storiesWithUsernames.reduce((acc, story) => {
+        // Skip stories without valid userId
+        if (!story.userId) return acc;
+        
         const existing = acc.find(g => g.userId === story.userId);
         
         if (existing) {
