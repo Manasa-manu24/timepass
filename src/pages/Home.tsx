@@ -162,8 +162,8 @@ const Home = () => {
         {/* Stories Section */}
         <Stories />
         
-        {/* Posts Section */}
-        <div className="px-4">
+        {/* Posts Section - Full width on mobile, padded on desktop */}
+        <div className="lg:px-4">
           {loading ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading posts...</p>

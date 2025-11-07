@@ -117,8 +117,8 @@ const Reels = () => {
         </Button>
       </div>
       
-      {/* Mobile Back Button - Fixed position at top-left (TopBar removed) */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      {/* Mobile Back Button - Fixed position at top-right corner */}
+      <div className="lg:hidden fixed top-4 right-4 z-50">
         <Button
           variant="ghost"
           size="icon"

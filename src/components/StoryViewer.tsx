@@ -86,7 +86,11 @@ const StoryViewer = ({
       }
 
       const viewedArray = currentStory.viewed || [];
-      if (viewedArray.length === 0) {
+      
+      // Filter out the story author from the viewers list
+      const filteredViewers = viewedArray.filter(userId => userId !== currentStory.userId);
+      
+      if (filteredViewers.length === 0) {
         setViewersList([]);
         return;
       }
@@ -94,7 +98,7 @@ const StoryViewer = ({
       setLoadingViewers(true);
       try {
         const viewers = await Promise.all(
-          viewedArray.map(async (userId) => {
+          filteredViewers.map(async (userId) => {
             try {
               const userDoc = await getDoc(doc(db, 'users', userId));
               if (userDoc.exists()) {

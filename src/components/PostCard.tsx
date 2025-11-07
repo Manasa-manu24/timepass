@@ -173,7 +173,7 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
   };
 
   return (
-    <Card className="mb-6 overflow-hidden border rounded-lg">
+    <Card className="mb-0 lg:mb-6 overflow-hidden border-x-0 lg:border-x rounded-none lg:rounded-lg border-b last:border-b-0 lg:border-b">
       {/* Post Header */}
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-3">
