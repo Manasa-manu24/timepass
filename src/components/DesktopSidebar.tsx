@@ -4,15 +4,18 @@ import { BsCameraReels, BsCameraReelsFill, BsBookmark, BsBookmarkFill } from 're
 import { IoChatbubbleOutline, IoChatbubble } from 'react-icons/io5';
 import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
+import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import UploadModal from './UploadModal';
 import { Search } from 'lucide-react';
 
 const DesktopSidebar = () => {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { unreadCount } = useUnreadMessages();
   const location = useLocation();
   const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -23,20 +26,32 @@ const DesktopSidebar = () => {
     icon: Icon, 
     activeIcon: ActiveIcon, 
     label, 
-    onClick 
+    onClick,
+    badge
   }: { 
     to?: string; 
     icon: any; 
     activeIcon?: any; 
     label: string; 
     onClick?: () => void;
+    badge?: number;
   }) => {
     const active = to && isActive(to);
     const IconComponent = active && ActiveIcon ? ActiveIcon : Icon;
 
     const content = (
       <div className={`flex items-center gap-4 px-3 py-3 rounded-lg hover:bg-accent transition-colors ${active ? 'font-semibold' : ''}`}>
-        <IconComponent size={28} />
+        <div className="relative">
+          <IconComponent size={28} />
+          {badge !== undefined && badge > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-0 px-1 text-xs"
+            >
+              {badge > 99 ? '99+' : badge}
+            </Badge>
+          )}
+        </div>
         <span className="text-base">{label}</span>
       </div>
     );
@@ -70,7 +85,7 @@ const DesktopSidebar = () => {
             <NavItem to="/" icon={AiOutlineHome} activeIcon={AiFillHome} label="Home" />
             <NavItem to="/search" icon={Search} label="Search" />
             <NavItem to="/reels" icon={BsCameraReels} activeIcon={BsCameraReelsFill} label="Reels" />
-            <NavItem to="/messages" icon={IoChatbubbleOutline} activeIcon={IoChatbubble} label="Messages" />
+            <NavItem to="/messages" icon={IoChatbubbleOutline} activeIcon={IoChatbubble} label="Messages" badge={unreadCount} />
             <NavItem to="/notifications" icon={AiOutlineHeart} activeIcon={AiFillHeart} label="Notifications" />
             
             {/* Upload Button - Prominent */}

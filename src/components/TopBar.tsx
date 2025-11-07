@@ -8,13 +8,14 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
+import { useUnreadMessages } from '@/hooks/use-unread-messages';
 
 const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: boolean }) => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const { unreadCount: messageCount } = useUnreadMessages();
   const [notificationCount, setNotificationCount] = useState(0);
-  const [messageCount, setMessageCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -29,10 +30,6 @@ const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: bo
     const unsubscribeNotif = onSnapshot(notifQuery, (snapshot) => {
       setNotificationCount(snapshot.docs.length);
     });
-
-    // Listen to unread messages (placeholder - implement when messages collection is ready)
-    // For now, just set to 0
-    setMessageCount(0);
 
     return () => {
       unsubscribeNotif();
