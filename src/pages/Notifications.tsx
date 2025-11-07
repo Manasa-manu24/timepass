@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
@@ -55,6 +55,37 @@ const Notifications = () => {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Mark all unread notifications as read when page loads
+  useEffect(() => {
+    if (!user || notifications.length === 0) return;
+
+    const markAllAsRead = async () => {
+      try {
+        const unreadNotifs = notifications.filter(notif => !notif.read);
+        
+        if (unreadNotifs.length === 0) return;
+
+        // Use batch write for better performance
+        const batch = writeBatch(db);
+        unreadNotifs.forEach(notif => {
+          const notifRef = doc(db, 'notifications', notif.id);
+          batch.update(notifRef, { read: true });
+        });
+        
+        await batch.commit();
+      } catch (error) {
+        console.error('Error marking notifications as read:', error);
+      }
+    };
+
+    // Small delay to ensure the notification count is visible before clearing
+    const timer = setTimeout(() => {
+      markAllAsRead();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [user, notifications]);
 
   const markAsRead = async (notifId: string) => {
     try {

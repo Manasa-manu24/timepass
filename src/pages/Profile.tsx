@@ -236,52 +236,64 @@ const Profile = () => {
       
       <main className="lg:ml-64 xl:ml-72 max-w-4xl mx-auto pt-4 lg:pt-8 pb-20 lg:pb-8 px-4">
         {/* Profile Header */}
-        <div className="flex flex-col md:flex-row gap-8 mb-12">
-          <Avatar className="w-32 h-32 md:w-40 md:h-40">
+        <div className="flex gap-4 md:gap-8 mb-6 md:mb-12">
+          {/* Profile Picture - Always on the left */}
+          <Avatar className="w-20 h-20 md:w-40 md:h-40 flex-shrink-0">
             <AvatarImage src={profile.profilePicUrl} />
-            <AvatarFallback className="text-4xl">
+            <AvatarFallback className="text-2xl md:text-4xl">
               {profile.username[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
-          <div className="flex-1">
-            <div className="flex items-center gap-4 mb-4">
-              <h1 className="text-2xl font-light">{profile.username}</h1>
+          {/* Profile Info - Beside profile picture on mobile, more space on desktop */}
+          <div className="flex-1 flex flex-col justify-center">
+            {/* Username and Follow Button */}
+            <div className="flex items-center gap-3 mb-3 md:mb-4">
+              <h1 className="text-lg md:text-2xl font-light">{profile.username}</h1>
               {!isOwnProfile && (
                 <Button
                   variant={isFollowing ? "outline" : "default"}
+                  size="sm"
                   onClick={handleFollow}
                   disabled={followLoading}
+                  className="md:size-default"
                 >
                   {followLoading ? 'Loading...' : isFollowing ? 'Unfollow' : 'Follow'}
                 </Button>
               )}
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-8 mb-4">
-              <div>
-                <span className="font-semibold">{posts.length}</span>{' '}
-                <span className="text-muted-foreground">posts</span>
+            {/* Stats - Horizontal layout on all screen sizes */}
+            <div className="flex gap-4 md:gap-8 mb-3 md:mb-4">
+              <div className="flex flex-col md:flex-row md:gap-1">
+                <span className="font-semibold text-sm md:text-base">{posts.length}</span>
+                <span className="text-muted-foreground text-xs md:text-base">posts</span>
               </div>
-              <div>
-                <span className="font-semibold">{profile.followers.length}</span>{' '}
-                <span className="text-muted-foreground">followers</span>
+              <div className="flex flex-col md:flex-row md:gap-1">
+                <span className="font-semibold text-sm md:text-base">{profile.followers.length}</span>
+                <span className="text-muted-foreground text-xs md:text-base">followers</span>
               </div>
-              <div>
-                <span className="font-semibold">{profile.following.length}</span>{' '}
-                <span className="text-muted-foreground">following</span>
+              <div className="flex flex-col md:flex-row md:gap-1">
+                <span className="font-semibold text-sm md:text-base">{profile.following.length}</span>
+                <span className="text-muted-foreground text-xs md:text-base">following</span>
               </div>
             </div>
 
-            {/* Bio */}
+            {/* Bio - Hidden on small mobile, show on slightly larger screens */}
             {profile.bio && (
-              <div>
+              <div className="hidden sm:block">
                 <p className="text-sm">{profile.bio}</p>
               </div>
             )}
           </div>
         </div>
+
+        {/* Bio on Mobile - Show below profile section on very small screens */}
+        {profile.bio && (
+          <div className="sm:hidden mb-6 -mt-2">
+            <p className="text-sm">{profile.bio}</p>
+          </div>
+        )}
 
         {/* Action Buttons Section - Before Posts */}
         <div className="mb-8 pb-8 border-b border-border">
