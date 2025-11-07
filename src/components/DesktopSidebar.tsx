@@ -9,13 +9,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
+import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
 import UploadModal from './UploadModal';
 import { Search } from 'lucide-react';
 
 const DesktopSidebar = () => {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { unreadCount } = useUnreadMessages();
+  const { unreadCount: unreadMessages } = useUnreadMessages();
+  const { unreadCount: unreadNotifications } = useUnreadNotifications();
   const location = useLocation();
   const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -85,8 +87,8 @@ const DesktopSidebar = () => {
             <NavItem to="/" icon={AiOutlineHome} activeIcon={AiFillHome} label="Home" />
             <NavItem to="/search" icon={Search} label="Search" />
             <NavItem to="/reels" icon={BsCameraReels} activeIcon={BsCameraReelsFill} label="Reels" />
-            <NavItem to="/messages" icon={IoChatbubbleOutline} activeIcon={IoChatbubble} label="Messages" badge={unreadCount} />
-            <NavItem to="/notifications" icon={AiOutlineHeart} activeIcon={AiFillHeart} label="Notifications" />
+            <NavItem to="/messages" icon={IoChatbubbleOutline} activeIcon={IoChatbubble} label="Messages" badge={unreadMessages} />
+            <NavItem to="/notifications" icon={AiOutlineHeart} activeIcon={AiFillHeart} label="Notifications" badge={unreadNotifications} />
             
             {/* Upload Button - Prominent */}
             <button

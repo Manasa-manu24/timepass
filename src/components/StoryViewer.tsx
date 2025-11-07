@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { AiOutlineClose, AiOutlineLeft, AiOutlineRight } from 'react-icons/ai';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { AiOutlineClose, AiOutlineLeft, AiOutlineRight, AiOutlineEye } from 'react-icons/ai';
 import { BsVolumeMute, BsVolumeUp } from 'react-icons/bs';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -40,6 +41,8 @@ const StoryViewer = ({
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [viewersList, setViewersList] = useState<Array<{ uid: string; username: string; profilePicUrl?: string }>>([]);
+  const [loadingViewers, setLoadingViewers] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -47,6 +50,7 @@ const StoryViewer = ({
   const isVideo = currentStory?.mediaUrl?.includes('.mp4') || 
                   currentStory?.mediaUrl?.includes('.webm') ||
                   currentStory?.mediaType === 'video';
+  const isOwnStory = currentStory?.userId === user?.uid;
   
   const STORY_DURATION = 5000; // 5 seconds for images
   const PROGRESS_INTERVAL = 50; // Update progress every 50ms
@@ -72,6 +76,52 @@ const StoryViewer = ({
 
     markAsViewed();
   }, [currentStory, user]);
+
+  // Fetch viewers information for own stories
+  useEffect(() => {
+    const fetchViewers = async () => {
+      if (!isOwnStory || !currentStory) {
+        setViewersList([]);
+        return;
+      }
+
+      const viewedArray = currentStory.viewed || [];
+      if (viewedArray.length === 0) {
+        setViewersList([]);
+        return;
+      }
+
+      setLoadingViewers(true);
+      try {
+        const viewers = await Promise.all(
+          viewedArray.map(async (userId) => {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', userId));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                return {
+                  uid: userId,
+                  username: userData.username || userData.displayName || 'User',
+                  profilePicUrl: userData.profilePicUrl || ''
+                };
+              }
+              return { uid: userId, username: 'User', profilePicUrl: '' };
+            } catch (error) {
+              console.error('Error fetching viewer data:', error);
+              return { uid: userId, username: 'User', profilePicUrl: '' };
+            }
+          })
+        );
+        setViewersList(viewers);
+      } catch (error) {
+        console.error('Error fetching viewers:', error);
+      } finally {
+        setLoadingViewers(false);
+      }
+    };
+
+    fetchViewers();
+  }, [currentStory, isOwnStory]);
 
   // Handle story progression
   useEffect(() => {
@@ -214,6 +264,43 @@ const StoryViewer = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Seen By button - only show for own stories */}
+          {isOwnStory && viewersList.length > 0 && (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/20 gap-2"
+                >
+                  <AiOutlineEye size={20} />
+                  <span className="text-sm">{viewersList.length}</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[60vh] rounded-t-2xl">
+                <SheetHeader>
+                  <SheetTitle>Seen by {viewersList.length} {viewersList.length === 1 ? 'person' : 'people'}</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 space-y-3 overflow-y-auto max-h-[calc(60vh-100px)]">
+                  {loadingViewers ? (
+                    <p className="text-center text-muted-foreground">Loading viewers...</p>
+                  ) : (
+                    viewersList.map((viewer) => (
+                      <div key={viewer.uid} className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={viewer.profilePicUrl} />
+                          <AvatarFallback>
+                            {viewer.username[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="font-medium">{viewer.username}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
           {isVideo && (
             <Button
               variant="ghost"

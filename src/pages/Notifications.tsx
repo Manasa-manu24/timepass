@@ -45,8 +45,11 @@ const Notifications = () => {
         ...doc.data()
       })) as Notification[];
       
-      notifData.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds);
-      setNotifications(notifData);
+      // Filter out message notifications - only show likes, comments, follows
+      const filteredNotifs = notifData.filter(notif => notif.type !== 'message');
+      
+      filteredNotifs.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds);
+      setNotifications(filteredNotifs);
       setLoading(false);
     });
 
@@ -77,8 +80,6 @@ const Notifications = () => {
         return 'commented on your post';
       case 'follow':
         return 'started following you';
-      case 'message':
-        return notif.messagePreview ? `sent you a message: "${notif.messagePreview}"` : 'sent you a message';
       default:
         return '';
     }
@@ -88,9 +89,7 @@ const Notifications = () => {
     markAsRead(notif.id);
     
     // Navigate based on notification type
-    if (notif.type === 'message') {
-      navigate('/messages');
-    } else if (notif.type === 'follow') {
+    if (notif.type === 'follow') {
       navigate(`/profile/${notif.senderId}`);
     } else if (notif.postId) {
       // Navigate to post/reel

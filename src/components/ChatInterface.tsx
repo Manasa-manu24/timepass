@@ -10,7 +10,10 @@ import {
   doc,
   setDoc,
   getDoc,
-  updateDoc
+  updateDoc,
+  arrayUnion,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AiOutlineSend, AiOutlineArrowLeft } from 'react-icons/ai';
+import { BsCheckAll } from 'react-icons/bs';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -26,6 +30,8 @@ interface Message {
   text: string;
   senderId: string;
   timestamp: any;
+  seenBy?: string[]; // Array of user IDs who have seen this message
+  seenAt?: any; // Timestamp when message was seen
 }
 
 interface ChatInterfaceProps {
@@ -92,6 +98,38 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Mark messages as seen when viewing the chat
+  useEffect(() => {
+    if (!chatId || !user || messages.length === 0) return;
+
+    const markMessagesAsSeen = async () => {
+      try {
+        const messagesRef = collection(db, 'chats', chatId, 'messages');
+        
+        // Find messages sent by the other user that haven't been seen by current user
+        const unseenMessages = messages.filter(msg => 
+          msg.senderId !== user.uid && 
+          (!msg.seenBy || !msg.seenBy.includes(user.uid))
+        );
+
+        // Mark each unseen message as seen
+        for (const message of unseenMessages) {
+          const messageRef = doc(db, 'chats', chatId, 'messages', message.id);
+          await updateDoc(messageRef, {
+            seenBy: arrayUnion(user.uid),
+            seenAt: serverTimestamp()
+          });
+        }
+      } catch (error) {
+        console.error('Error marking messages as seen:', error);
+      }
+    };
+
+    // Mark messages as seen after a short delay to ensure they're actually viewed
+    const timer = setTimeout(markMessagesAsSeen, 1000);
+    return () => clearTimeout(timer);
+  }, [chatId, user, messages]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -107,7 +145,9 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
       await addDoc(messagesRef, {
         text: messageText,
         senderId: user.uid,
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        seenBy: [user.uid], // Sender has "seen" their own message
+        seenAt: null
       });
 
       // Update chat document with last message info
@@ -193,6 +233,7 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
           ) : (
             messages.map((message) => {
               const isOwnMessage = message.senderId === user?.uid;
+              const isSeen = message.seenBy && message.seenBy.length > 1; // More than just sender
               
               return (
                 <div
@@ -207,9 +248,19 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
                     }`}
                   >
                     <p className="text-sm break-words">{message.text}</p>
-                    <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                      {formatDistanceToNow(getTimestampDate(message.timestamp), { addSuffix: true })}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                        {formatDistanceToNow(getTimestampDate(message.timestamp), { addSuffix: true })}
+                      </p>
+                      {isOwnMessage && isSeen && (
+                        <div className="flex items-center gap-1">
+                          <BsCheckAll className={`text-sm ${isOwnMessage ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                          <span className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                            Seen
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

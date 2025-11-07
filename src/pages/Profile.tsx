@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import EditProfileDialog from '@/components/EditProfileDialog';
@@ -203,9 +202,8 @@ const Profile = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopBar />
         <DesktopSidebar />
-        <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0">
+        <main className="lg:ml-64 xl:ml-72 pt-4 lg:pt-0">
           <div className="flex items-center justify-center py-12">
             <p className="text-muted-foreground">Loading profile...</p>
           </div>
@@ -218,9 +216,8 @@ const Profile = () => {
   if (!profile) {
     return (
       <div className="min-h-screen bg-background">
-        <TopBar />
         <DesktopSidebar />
-        <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0">
+        <main className="lg:ml-64 xl:ml-72 pt-4 lg:pt-0">
           <div className="flex items-center justify-center py-12">
             <p className="text-muted-foreground">Profile not found</p>
           </div>
@@ -234,10 +231,10 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar />
+      {/* TopBar hidden on Profile page for cleaner immersive experience */}
       <DesktopSidebar />
       
-      <main className="lg:ml-64 xl:ml-72 max-w-4xl mx-auto pt-14 lg:pt-8 pb-20 lg:pb-8 px-4">
+      <main className="lg:ml-64 xl:ml-72 max-w-4xl mx-auto pt-4 lg:pt-8 pb-20 lg:pb-8 px-4">
         {/* Profile Header */}
         <div className="flex flex-col md:flex-row gap-8 mb-12">
           <Avatar className="w-32 h-32 md:w-40 md:h-40">

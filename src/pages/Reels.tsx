@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import ReelPlayer from '@/components/ReelPlayer';
@@ -102,7 +101,7 @@ const Reels = () => {
 
   return (
     <div className="min-h-screen bg-black">
-      <TopBar showBackButton />
+      {/* TopBar hidden on Reels page for immersive full-screen experience */}
       <DesktopSidebar />
       
       {/* Desktop Back Button - Fixed position at top-right */}
@@ -118,8 +117,8 @@ const Reels = () => {
         </Button>
       </div>
       
-      {/* Mobile Back Button - Fixed position at top-left below TopBar */}
-      <div className="lg:hidden fixed top-16 left-4 z-50">
+      {/* Mobile Back Button - Fixed position at top-left (TopBar removed) */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
           variant="ghost"
           size="icon"
