@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AiOutlinePlus } from 'react-icons/ai';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import UploadSheet from './UploadSheet';
+import StoryViewer from './StoryViewer';
 
 interface Story {
   id: string;
@@ -14,7 +15,7 @@ interface Story {
   userProfilePic?: string;
   mediaUrl: string;
   timestamp: any;
-  viewed: string[]; // Array of user IDs who viewed this story
+  viewed?: string[]; // Array of user IDs who viewed this story (optional for backwards compatibility)
 }
 
 interface StoryGroup {
@@ -28,9 +29,15 @@ interface StoryGroup {
 const Stories = () => {
   const { user } = useAuth();
   const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
+  const [userStories, setUserStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadMode, setUploadMode] = useState<'post' | 'reel' | 'story'>('post');
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentStories, setCurrentStories] = useState<Story[]>([]);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [allStoryGroups, setAllStoryGroups] = useState<StoryGroup[]>([]);
+  const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
 
   useEffect(() => {
     // Query for recent stories (last 24 hours)
@@ -67,18 +74,32 @@ const Stories = () => {
         } else {
           acc.push({
             userId: story.userId,
-            username: story.username,
+            username: story.username || 'User',
             userProfilePic: story.userProfilePic,
             stories: [story],
-            hasUnviewed: !story.viewed.includes(user?.uid || '')
+            hasUnviewed: !(story.viewed || []).includes(user?.uid || '')
           });
         }
         
         return acc;
       }, [] as StoryGroup[]);
 
-      // Sort by: unviewed first, then by most recent story
-      grouped.sort((a, b) => {
+      // Separate current user's stories from others
+      const currentUserStories = grouped.find(g => g.userId === user?.uid);
+      const otherStories = grouped.filter(g => g.userId !== user?.uid);
+
+      // Set user's own stories separately
+      setUserStories(currentUserStories?.stories || []);
+
+      // Create complete list with user's stories first (if they exist)
+      const completeList = currentUserStories 
+        ? [currentUserStories, ...otherStories]
+        : otherStories;
+      
+      setAllStoryGroups(completeList);
+
+      // Sort other users' stories by: unviewed first, then by most recent story
+      otherStories.sort((a, b) => {
         if (a.hasUnviewed && !b.hasUnviewed) return -1;
         if (!a.hasUnviewed && b.hasUnviewed) return 1;
         
@@ -95,7 +116,7 @@ const Stories = () => {
         return latestB - latestA;
       });
 
-      setStoryGroups(grouped);
+      setStoryGroups(otherStories);
       setLoading(false);
     }, (error) => {
       console.error('Error fetching stories:', error);
@@ -106,8 +127,45 @@ const Stories = () => {
   }, [user]);
 
   const handleStoryClick = (storyGroup: StoryGroup) => {
-    // TODO: Implement story viewer modal
-    console.log('Open story viewer for:', storyGroup);
+    // Find the index of this group in all story groups
+    const groupIndex = allStoryGroups.findIndex(g => g.userId === storyGroup.userId);
+    setCurrentGroupIndex(groupIndex);
+    setCurrentStories(storyGroup.stories);
+    setCurrentStoryIndex(0);
+    setViewerOpen(true);
+  };
+
+  const handleUserStoryClick = () => {
+    if (userStories.length > 0) {
+      // User has stories - view them
+      setCurrentGroupIndex(0);
+      setCurrentStories(userStories);
+      setCurrentStoryIndex(0);
+      setViewerOpen(true);
+    } else {
+      // No stories - open upload
+      handleAddStory();
+    }
+  };
+
+  const handleNextGroup = () => {
+    if (currentGroupIndex < allStoryGroups.length - 1) {
+      const nextGroup = allStoryGroups[currentGroupIndex + 1];
+      setCurrentGroupIndex(currentGroupIndex + 1);
+      setCurrentStories(nextGroup.stories);
+      setCurrentStoryIndex(0);
+    } else {
+      setViewerOpen(false);
+    }
+  };
+
+  const handlePreviousGroup = () => {
+    if (currentGroupIndex > 0) {
+      const prevGroup = allStoryGroups[currentGroupIndex - 1];
+      setCurrentGroupIndex(currentGroupIndex - 1);
+      setCurrentStories(prevGroup.stories);
+      setCurrentStoryIndex(0);
+    }
   };
 
   const handleAddStory = () => {
@@ -124,25 +182,45 @@ const Stories = () => {
       <div className="border-b border-border bg-card">
         <ScrollArea className="w-full">
           <div className="flex gap-4 p-4 pb-3 overflow-x-auto">
-            {/* Add Your Story */}
+            {/* Add Your Story / View Your Stories */}
             <button
-              onClick={handleAddStory}
+              onClick={handleUserStoryClick}
               className="flex flex-col items-center gap-2 flex-shrink-0"
-              aria-label="Add your story"
+              aria-label={userStories.length > 0 ? "View your story" : "Add your story"}
             >
-            <div className="relative">
-              <Avatar className="w-16 h-16 ring-2 ring-border">
-                <AvatarImage src={user?.photoURL || ''} />
-                <AvatarFallback className="text-sm">
-                  {user?.email?.[0].toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute bottom-0 right-0 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center ring-2 ring-card">
-                <AiOutlinePlus size={12} />
+              <div className="relative">
+                {userStories.length > 0 ? (
+                  // User has stories - show with gradient ring and latest story preview
+                  <div className="p-0.5 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-pink-500">
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden ring-2 ring-card">
+                      {userStories[0].mediaUrl && (
+                        <img 
+                          src={userStories[0].mediaUrl} 
+                          alt="Your story"
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // No stories - show add button
+                  <>
+                    <Avatar className="w-16 h-16 ring-2 ring-border">
+                      <AvatarImage src={user?.photoURL || ''} />
+                      <AvatarFallback className="text-sm">
+                        {user?.email?.[0].toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute bottom-0 right-0 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center ring-2 ring-card">
+                      <AiOutlinePlus size={12} />
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-            <span className="text-xs font-medium max-w-[64px] truncate">Your story</span>
-          </button>
+              <span className="text-xs font-medium max-w-[64px] truncate">
+                {userStories.length > 0 ? 'Your story' : 'Your story'}
+              </span>
+            </button>
 
           {/* Story Groups */}
           {storyGroups.map((group) => (
@@ -161,13 +239,13 @@ const Stories = () => {
                   <Avatar className="w-16 h-16 ring-2 ring-card">
                     <AvatarImage src={group.userProfilePic} />
                     <AvatarFallback className="text-sm">
-                      {group.username[0].toUpperCase()}
+                      {group.username?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                 </div>
               </div>
               <span className="text-xs font-medium max-w-[64px] truncate">
-                {group.username}
+                {group.username || 'User'}
               </span>
             </button>
           ))}
@@ -180,6 +258,17 @@ const Stories = () => {
       onOpenChange={setUploadOpen}
       defaultMode={uploadMode}
     />
+
+    {/* Story Viewer */}
+    {viewerOpen && currentStories.length > 0 && (
+      <StoryViewer
+        stories={currentStories}
+        currentStoryIndex={currentStoryIndex}
+        onClose={() => setViewerOpen(false)}
+        onNext={handleNextGroup}
+        onPrevious={handlePreviousGroup}
+      />
+    )}
   </>
   );
 };

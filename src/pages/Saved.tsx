@@ -54,7 +54,10 @@ const Saved = () => {
             ...doc.data()
           })) as Post[];
         
-        setSavedPosts(postsData);
+        // Filter out stories - they should only appear in Stories section
+        const regularPosts = postsData.filter(post => (post as any).postType !== 'story');
+        
+        setSavedPosts(regularPosts);
       } catch (error) {
         console.error('Error fetching saved posts:', error);
       } finally {

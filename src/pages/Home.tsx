@@ -58,8 +58,11 @@ const Home = () => {
         ...doc.data()
       })) as Post[];
       
+      // Filter out stories - they should only appear in Stories section
+      const regularPosts = postsData.filter(post => post.postType !== 'story');
+      
       // Sort posts client-side by timestamp
-      const sortedPosts = postsData.sort((a, b) => {
+      const sortedPosts = regularPosts.sort((a, b) => {
         // Helper to convert timestamp to milliseconds
         const getTime = (timestamp: any): number => {
           if (!timestamp) return 0;

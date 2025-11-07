@@ -71,7 +71,10 @@ const Profile = () => {
         ...doc.data()
       })) as Post[];
       
-      setPosts(postsData);
+      // Filter out stories - they should only appear in Stories section
+      const regularPosts = postsData.filter(post => (post as any).postType !== 'story');
+      
+      setPosts(regularPosts);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {

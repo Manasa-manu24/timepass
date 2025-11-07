@@ -108,7 +108,14 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
         postType,
         likes: [],
         commentsCount: 0,
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        // Add viewed array for stories
+        ...(postType === 'story' && { 
+          viewed: [],
+          userId: user.uid,
+          username: userData?.username || user.email?.split('@')[0] || 'User',
+          userProfilePic: userData?.profilePicUrl || ''
+        })
       });
 
       toast.success('Posted successfully!');

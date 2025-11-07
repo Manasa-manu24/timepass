@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AiOutlineHeart, AiFillHeart, AiOutlineComment, AiOutlineSend } from 'react-icons/ai';
 import { BsThreeDots, BsVolumeMute, BsVolumeUp } from 'react-icons/bs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { doc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import CommentsDialog from '@/components/CommentsDialog';
 
 interface ReelPlayerProps {
   reel: {
@@ -27,6 +30,7 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
   const [isLiked, setIsLiked] = useState(user ? reel.likes.includes(user.uid) : false);
   const [isMuted, setIsMuted] = useState(true);
   const [hasViewed, setHasViewed] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -101,6 +105,32 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
     }
   };
 
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/post/${reel.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${reel.authorUsername}'s reel`,
+          text: reel.caption,
+          url: shareUrl,
+        });
+        toast.success('Shared successfully!');
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback to copying link
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied to clipboard!');
+      } catch (error) {
+        console.error('Error copying link:', error);
+        toast.error('Failed to copy link');
+      }
+    }
+  };
+
   return (
     <div className="relative w-full h-full bg-black">
       {/* Video */}
@@ -125,7 +155,12 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
               {reel.authorUsername[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="font-semibold text-white">{reel.authorUsername}</span>
+          <Link 
+            to={`/profile/${reel.authorId}`}
+            className="font-semibold text-white hover:opacity-70 transition-opacity"
+          >
+            {reel.authorUsername}
+          </Link>
         </div>
         <Button variant="ghost" size="icon" className="text-white">
           <BsThreeDots size={24} />
@@ -149,14 +184,22 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           </span>
         </button>
 
-        <button className="flex flex-col items-center gap-1" aria-label="Comment">
+        <button 
+          className="flex flex-col items-center gap-1" 
+          aria-label="Comment"
+          onClick={() => setCommentsOpen(true)}
+        >
           <AiOutlineComment size={32} className="text-white" />
           <span className="text-white text-xs font-semibold">
             {reel.commentsCount}
           </span>
         </button>
 
-        <button className="flex flex-col items-center gap-1" aria-label="Share">
+        <button 
+          className="flex flex-col items-center gap-1" 
+          aria-label="Share"
+          onClick={handleShare}
+        >
           <AiOutlineSend size={32} className="text-white" />
         </button>
 
@@ -180,6 +223,13 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           {reel.caption}
         </p>
       </div>
+
+      {/* Comments Dialog */}
+      <CommentsDialog
+        postId={reel.id}
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+      />
     </div>
   );
 };
