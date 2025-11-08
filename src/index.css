@@ -122,4 +122,32 @@ All colors MUST be HSL.
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Mobile story viewer utilities */
+  .mobile-fixed-viewport {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100vh;
+    height: -webkit-fill-available;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent iOS bounce/rubber band effect */
+  .prevent-bounce {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Touch action none for non-interactive areas */
+  .no-touch-action {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }

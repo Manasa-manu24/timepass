@@ -64,22 +64,56 @@ const StoryViewer = ({
 
   // Prevent body scroll on mobile when story viewer is open
   useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    const originalPosition = window.getComputedStyle(document.body).position;
-    const originalHeight = window.getComputedStyle(document.body).height;
+    // Save current scroll position
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
     
-    // Prevent scrolling on mobile
+    // Save original styles
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    const originalLeft = document.body.style.left;
+    const originalWidth = document.body.style.width;
+    const originalHeight = document.body.style.height;
+    const originalTouchAction = document.body.style.touchAction;
+    
+    // Apply strict mobile scroll prevention
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = `-${scrollX}px`;
     document.body.style.width = '100%';
     document.body.style.height = '100vh';
+    document.body.style.touchAction = 'none';
+    
+    // Prevent iOS rubber band effect
+    const preventScroll = (e: TouchEvent) => {
+      if (e.target instanceof HTMLElement) {
+        // Allow scrolling only within specific scrollable elements
+        const isScrollable = e.target.closest('.allow-scroll');
+        if (!isScrollable) {
+          e.preventDefault();
+        }
+      }
+    };
+    
+    document.addEventListener('touchmove', preventScroll, { passive: false });
     
     return () => {
       // Restore original styles
-      document.body.style.overflow = originalStyle;
+      document.body.style.overflow = originalOverflow;
       document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.left = originalLeft;
+      document.body.style.width = originalWidth;
       document.body.style.height = originalHeight;
-      document.body.style.width = '';
+      document.body.style.touchAction = originalTouchAction;
+      
+      // Restore scroll position
+      window.scrollTo(scrollX, scrollY);
+      
+      // Remove event listener
+      document.removeEventListener('touchmove', preventScroll);
     };
   }, []);
 
@@ -389,7 +423,15 @@ const StoryViewer = ({
   if (!currentStory) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black overflow-hidden" style={{ height: '100dvh' }}>
+    <div 
+      className="fixed inset-0 z-50 bg-black overflow-hidden"
+      style={{ 
+        height: '100vh',
+        maxHeight: '-webkit-fill-available',
+        touchAction: 'none',
+        WebkitOverflowScrolling: 'touch'
+      } as React.CSSProperties}
+    >
       {/* Progress bars */}
       <div className="absolute top-0 left-0 right-0 z-20 flex gap-1 p-2">
         {stories.map((story, index) => (
@@ -480,9 +522,15 @@ const StoryViewer = ({
 
       {/* Story content */}
       <div 
-        className="relative w-full h-full flex items-center justify-center touch-none"
+        className="relative w-full flex items-center justify-center"
         onClick={handleTap}
-        style={{ height: '100dvh' }}
+        style={{ 
+          height: '100vh',
+          maxHeight: '-webkit-fill-available',
+          touchAction: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none'
+        } as React.CSSProperties}
       >
         {isVideo ? (
           <video
@@ -551,7 +599,7 @@ const StoryViewer = ({
           onSubmit={handleStoryInteraction}
           className="absolute bottom-4 left-4 right-4 z-20 flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
+          style={{ touchAction: 'auto' } as React.CSSProperties}
         >
           <div className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 flex items-center">
             <Input
@@ -563,6 +611,7 @@ const StoryViewer = ({
               onBlur={() => setIsPaused(false)}
               disabled={sendingComment}
               className="bg-transparent border-0 text-white placeholder:text-white/70 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+              style={{ touchAction: 'auto' } as React.CSSProperties}
             />
           </div>
           <Button
