@@ -3,38 +3,15 @@ import { AiOutlineHeart, AiOutlineSend, AiOutlineArrowLeft } from 'react-icons/a
 import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
+import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
 
 const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: boolean }) => {
-  const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const { unreadCount: messageCount } = useUnreadMessages();
-  const [notificationCount, setNotificationCount] = useState(0);
-
-  useEffect(() => {
-    if (!user) return;
-
-    // Listen to unread notifications
-    const notifQuery = query(
-      collection(db, 'notifications'),
-      where('userId', '==', user.uid),
-      where('read', '==', false)
-    );
-
-    const unsubscribeNotif = onSnapshot(notifQuery, (snapshot) => {
-      setNotificationCount(snapshot.docs.length);
-    });
-
-    return () => {
-      unsubscribeNotif();
-    };
-  }, [user]);
+  const { unreadCount: notificationCount } = useUnreadNotifications();
 
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card/95 backdrop-blur-md border-b border-border z-50">
