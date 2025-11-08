@@ -47,7 +47,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'posts' | 'reposted'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'reposted'>('posts');
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [followingDialogOpen, setFollowingDialogOpen] = useState(false);
 
@@ -228,7 +228,9 @@ const Profile = () => {
 
   // Filter posts based on active tab
   const displayedPosts = activeTab === 'posts' 
-    ? posts.filter(post => !(post as any).isRepost)  // Original posts only
+    ? posts.filter(post => !(post as any).isRepost && post.mediaType !== 'video')  // Original posts (images only)
+    : activeTab === 'reels'
+    ? posts.filter(post => !(post as any).isRepost && post.mediaType === 'video')  // Original reels (videos only)
     : posts.filter(post => (post as any).isRepost);   // Reposted content only
 
   return (
@@ -269,9 +271,15 @@ const Profile = () => {
             <div className="flex gap-4 md:gap-8 mb-3 md:mb-4">
               <div className="flex flex-col md:flex-row md:gap-1">
                 <span className="font-semibold text-sm md:text-base">
-                  {posts.filter(post => !(post as any).isRepost).length}
+                  {posts.filter(post => !(post as any).isRepost && post.mediaType !== 'video').length}
                 </span>
                 <span className="text-muted-foreground text-xs md:text-base">posts</span>
+              </div>
+              <div className="flex flex-col md:flex-row md:gap-1">
+                <span className="font-semibold text-sm md:text-base">
+                  {posts.filter(post => !(post as any).isRepost && post.mediaType === 'video').length}
+                </span>
+                <span className="text-muted-foreground text-xs md:text-base">reels</span>
               </div>
               <button 
                 className="flex flex-col md:flex-row md:gap-1 hover:opacity-70 transition-opacity"
@@ -385,6 +393,18 @@ const Profile = () => {
             
             <button 
               className={`flex items-center gap-2 px-4 py-2 transition-colors ${
+                activeTab === 'reels' 
+                  ? 'border-t-2 border-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('reels')}
+            >
+              <BsCameraReels size={16} />
+              <span className="text-xs font-semibold uppercase">Reels</span>
+            </button>
+            
+            <button 
+              className={`flex items-center gap-2 px-4 py-2 transition-colors ${
                 activeTab === 'reposted' 
                   ? 'border-t-2 border-foreground' 
                   : 'text-muted-foreground hover:text-foreground'
@@ -399,7 +419,7 @@ const Profile = () => {
           {displayedPosts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                {activeTab === 'posts' ? 'No posts yet' : 'No reposts yet'}
+                {activeTab === 'posts' ? 'No posts yet' : activeTab === 'reels' ? 'No reels yet' : 'No reposts yet'}
               </p>
             </div>
           ) : (
