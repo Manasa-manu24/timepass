@@ -62,6 +62,27 @@ const StoryViewer = ({
   const STORY_DURATION = 5000; // 5 seconds for images
   const PROGRESS_INTERVAL = 50; // Update progress every 50ms
 
+  // Prevent body scroll on mobile when story viewer is open
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    const originalPosition = window.getComputedStyle(document.body).position;
+    const originalHeight = window.getComputedStyle(document.body).height;
+    
+    // Prevent scrolling on mobile
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100vh';
+    
+    return () => {
+      // Restore original styles
+      document.body.style.overflow = originalStyle;
+      document.body.style.position = originalPosition;
+      document.body.style.height = originalHeight;
+      document.body.style.width = '';
+    };
+  }, []);
+
   // Mark story as viewed
   useEffect(() => {
     const markAsViewed = async () => {
@@ -368,7 +389,7 @@ const StoryViewer = ({
   if (!currentStory) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
+    <div className="fixed inset-0 z-50 bg-black overflow-hidden" style={{ height: '100dvh' }}>
       {/* Progress bars */}
       <div className="absolute top-0 left-0 right-0 z-20 flex gap-1 p-2">
         {stories.map((story, index) => (
@@ -459,8 +480,9 @@ const StoryViewer = ({
 
       {/* Story content */}
       <div 
-        className="relative w-full h-full flex items-center justify-center"
+        className="relative w-full h-full flex items-center justify-center touch-none"
         onClick={handleTap}
+        style={{ height: '100dvh' }}
       >
         {isVideo ? (
           <video
@@ -529,6 +551,7 @@ const StoryViewer = ({
           onSubmit={handleStoryInteraction}
           className="absolute bottom-4 left-4 right-4 z-20 flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
         >
           <div className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 flex items-center">
             <Input
