@@ -205,17 +205,17 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
         </Button>
       </div>
 
-      {/* Side Actions */}
-      <div className="absolute right-4 bottom-24 flex flex-col gap-6 z-10">
+      {/* Side Actions - Adjusted for mobile bottom nav */}
+      <div className="absolute right-4 bottom-40 lg:bottom-24 flex flex-col gap-5 lg:gap-6 z-10">
         <button
           onClick={handleLike}
           className="flex flex-col items-center gap-1"
           aria-label={isLiked ? 'Unlike' : 'Like'}
         >
           {isLiked ? (
-            <AiFillHeart size={32} className="text-destructive" />
+            <AiFillHeart size={30} className="text-destructive lg:w-8 lg:h-8" />
           ) : (
-            <AiOutlineHeart size={32} className="text-white" />
+            <AiOutlineHeart size={30} className="text-white lg:w-8 lg:h-8" />
           )}
           <span className="text-white text-xs font-semibold">
             {reel.likes.length}
@@ -227,7 +227,7 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           aria-label="Comment"
           onClick={() => setCommentsOpen(true)}
         >
-          <AiOutlineComment size={32} className="text-white" />
+          <AiOutlineComment size={30} className="text-white lg:w-8 lg:h-8" />
           <span className="text-white text-xs font-semibold">
             {reel.commentsCount}
           </span>
@@ -238,7 +238,7 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           aria-label="Repost"
           onClick={handleRepost}
         >
-          <BiRepost size={32} className="text-white" />
+          <BiRepost size={30} className="text-white lg:w-8 lg:h-8" />
         </button>
 
         <button 
@@ -246,7 +246,7 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           aria-label="Share"
           onClick={handleShare}
         >
-          <AiOutlineSend size={32} className="text-white" />
+          <AiOutlineSend size={30} className="text-white lg:w-8 lg:h-8" />
         </button>
 
         <button 
@@ -255,30 +255,30 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           aria-label={isMuted ? 'Unmute' : 'Mute'}
         >
           {isMuted ? (
-            <BsVolumeMute size={28} className="text-white" />
+            <BsVolumeMute size={26} className="text-white lg:w-7 lg:h-7" />
           ) : (
-            <BsVolumeUp size={28} className="text-white" />
+            <BsVolumeUp size={26} className="text-white lg:w-7 lg:h-7" />
           )}
         </button>
       </div>
 
-      {/* Bottom Info - Username and Caption */}
-      <div className="absolute bottom-4 left-4 right-20 z-10 flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <Avatar className="w-9 h-9 ring-2 ring-white">
+      {/* Bottom Info - Username and Caption - Adjusted for mobile bottom nav */}
+      <div className="absolute bottom-20 lg:bottom-4 left-4 right-24 lg:right-20 z-10 flex flex-col gap-2">
+        <div className="flex items-center gap-2 lg:gap-3">
+          <Avatar className="w-8 h-8 lg:w-9 lg:h-9 ring-2 ring-white">
             <AvatarImage src={reel.authorProfilePic} />
-            <AvatarFallback className="bg-primary text-white">
+            <AvatarFallback className="bg-primary text-white text-xs">
               {reel.authorUsername[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <Link 
             to={`/profile/${reel.authorId}`}
-            className="font-semibold text-white hover:opacity-70 transition-opacity"
+            className="font-semibold text-white hover:opacity-70 transition-opacity text-sm lg:text-base"
           >
             {reel.authorUsername}
           </Link>
         </div>
-        <p className="text-white text-sm line-clamp-2">
+        <p className="text-white text-xs lg:text-sm line-clamp-2 leading-relaxed">
           {reel.caption}
         </p>
       </div>
