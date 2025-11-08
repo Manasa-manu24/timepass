@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import ReelPlayer from '@/components/ReelPlayer';
@@ -23,9 +24,12 @@ interface Reel {
 
 const Reels = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [reels, setReels] = useState<Reel[]>([]);
+  const [allReels, setAllReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<'reels' | 'friends'>('reels');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -67,6 +71,7 @@ const Reels = () => {
         return timeB - timeA; // Descending order (newest first)
       });
       
+      setAllReels(sortedReels);
       setReels(sortedReels);
       setLoading(false);
     }, (error) => {
@@ -76,6 +81,42 @@ const Reels = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // Filter reels based on active tab
+  useEffect(() => {
+    const filterReels = async () => {
+      if (activeTab === 'reels') {
+        setReels(allReels);
+      } else if (activeTab === 'friends' && user) {
+        setLoading(true);
+        try {
+          // Get current user's following list
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          const userData = userDoc.data();
+          const following = userData?.following || [];
+
+          if (following.length === 0) {
+            setReels([]);
+            setLoading(false);
+            return;
+          }
+
+          // Filter reels to only show those liked by friends
+          const friendLikedReels = allReels.filter(reel => 
+            reel.likes.some(likeUserId => following.includes(likeUserId))
+          );
+
+          setReels(friendLikedReels);
+        } catch (error) {
+          console.error('Error filtering friend reels:', error);
+          setReels([]);
+        }
+        setLoading(false);
+      }
+    };
+
+    filterReels();
+  }, [activeTab, allReels, user]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -103,6 +144,30 @@ const Reels = () => {
     <div className="min-h-screen bg-black">
       {/* TopBar hidden on Reels page for immersive full-screen experience */}
       <DesktopSidebar />
+      
+      {/* Header Tabs - Fixed at top center */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20">
+        <button
+          onClick={() => setActiveTab('reels')}
+          className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+            activeTab === 'reels'
+              ? 'bg-white text-black'
+              : 'text-white hover:bg-white/10'
+          }`}
+        >
+          Reels
+        </button>
+        <button
+          onClick={() => setActiveTab('friends')}
+          className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+            activeTab === 'friends'
+              ? 'bg-white text-black'
+              : 'text-white hover:bg-white/10'
+          }`}
+        >
+          Friends
+        </button>
+      </div>
       
       {/* Desktop Back Button - Fixed position at top-right */}
       <div className="hidden lg:block fixed top-6 right-6 z-50">
@@ -162,8 +227,14 @@ const Reels = () => {
           ) : reels.length === 0 ? (
             <div className="h-[calc(100vh-3.5rem)] lg:h-screen flex items-center justify-center bg-black">
               <div className="text-center">
-                <p className="text-white text-lg mb-4">No reels yet</p>
-                <Button onClick={() => navigate('/create')}>Create your first reel</Button>
+                <p className="text-white text-lg mb-4">
+                  {activeTab === 'friends' 
+                    ? 'No reels liked by your friends yet' 
+                    : 'No reels yet'}
+                </p>
+                {activeTab === 'reels' && (
+                  <Button onClick={() => navigate('/create')}>Create your first reel</Button>
+                )}
               </div>
             </div>
           ) : (

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AiOutlineHeart, AiFillHeart, AiOutlineComment, AiOutlineSend } from 'react-icons/ai';
 import { BsThreeDots, BsVolumeMute, BsVolumeUp } from 'react-icons/bs';
+import { BiRepost } from 'react-icons/bi';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { doc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -105,6 +106,57 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
     }
   };
 
+  const handleRepost = async () => {
+    if (!user) {
+      toast.error('Please sign in to repost');
+      return;
+    }
+
+    try {
+      // Get current user's data
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data();
+
+      // Create a new post that references the original reel
+      await addDoc(collection(db, 'posts'), {
+        authorId: user.uid,
+        authorUsername: userData?.username || user.email?.split('@')[0] || 'Anonymous',
+        authorProfilePic: userData?.profilePicUrl || '',
+        caption: `Reposted from @${reel.authorUsername}`,
+        mediaUrl: reel.mediaUrl,
+        mediaType: 'video',
+        likes: [],
+        comments: [],
+        commentsCount: 0,
+        timestamp: serverTimestamp(),
+        isRepost: true,
+        originalPostId: reel.id,
+        originalAuthorId: reel.authorId,
+        originalAuthorUsername: reel.authorUsername
+      });
+
+      // Create notification for the original author
+      if (user.uid !== reel.authorId) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: reel.authorId,
+          type: 'repost',
+          senderId: user.uid,
+          senderUsername: userData?.username || user.email?.split('@')[0] || 'Someone',
+          senderProfilePic: userData?.profilePicUrl || '',
+          postId: reel.id,
+          postType: 'reel',
+          timestamp: serverTimestamp(),
+          read: false
+        });
+      }
+
+      toast.success('Reposted successfully!');
+    } catch (error) {
+      console.error('Error reposting:', error);
+      toast.error('Failed to repost');
+    }
+  };
+
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/post/${reel.id}`;
     
@@ -146,22 +198,8 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
       {/* Gradient Overlays */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
 
-      {/* Top Info */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-          <Avatar className="w-10 h-10 ring-2 ring-white">
-            <AvatarImage src={reel.authorProfilePic} />
-            <AvatarFallback className="bg-primary text-white">
-              {reel.authorUsername[0].toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <Link 
-            to={`/profile/${reel.authorId}`}
-            className="font-semibold text-white hover:opacity-70 transition-opacity"
-          >
-            {reel.authorUsername}
-          </Link>
-        </div>
+      {/* Top Right Menu */}
+      <div className="absolute top-4 right-4 z-10">
         <Button variant="ghost" size="icon" className="text-white">
           <BsThreeDots size={24} />
         </Button>
@@ -197,6 +235,14 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
 
         <button 
           className="flex flex-col items-center gap-1" 
+          aria-label="Repost"
+          onClick={handleRepost}
+        >
+          <BiRepost size={32} className="text-white" />
+        </button>
+
+        <button 
+          className="flex flex-col items-center gap-1" 
           aria-label="Share"
           onClick={handleShare}
         >
@@ -216,10 +262,23 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
         </button>
       </div>
 
-      {/* Bottom Caption */}
-      <div className="absolute bottom-4 left-4 right-20 z-10">
+      {/* Bottom Info - Username and Caption */}
+      <div className="absolute bottom-4 left-4 right-20 z-10 flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <Avatar className="w-9 h-9 ring-2 ring-white">
+            <AvatarImage src={reel.authorProfilePic} />
+            <AvatarFallback className="bg-primary text-white">
+              {reel.authorUsername[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <Link 
+            to={`/profile/${reel.authorId}`}
+            className="font-semibold text-white hover:opacity-70 transition-opacity"
+          >
+            {reel.authorUsername}
+          </Link>
+        </div>
         <p className="text-white text-sm line-clamp-2">
-          <span className="font-semibold mr-2">{reel.authorUsername}</span>
           {reel.caption}
         </p>
       </div>
