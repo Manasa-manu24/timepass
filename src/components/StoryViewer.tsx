@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, updateDoc, arrayUnion, getDoc, addDoc, collection, increment } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, getDoc, addDoc, collection, increment, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { AiOutlineClose, AiOutlineLeft, AiOutlineRight, AiOutlineEye, AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
+import { AiOutlineClose, AiOutlineLeft, AiOutlineRight, AiOutlineEye, AiOutlineHeart, AiFillHeart, AiOutlineSend } from 'react-icons/ai';
 import { BsVolumeMute, BsVolumeUp } from 'react-icons/bs';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -240,10 +240,10 @@ const StoryViewer = ({
     }
   };
 
-  const handleSendComment = async (e: React.FormEvent) => {
+  const handleStoryInteraction = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!commentText.trim() || !user) return;
+    if (!user) return;
 
     setSendingComment(true);
 
@@ -251,27 +251,90 @@ const StoryViewer = ({
       // Get user data
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data();
+      const senderUsername = userData?.username || 'Anonymous';
+      const senderProfilePic = userData?.profilePicUrl || '';
 
-      // Add comment to comments collection
-      await addDoc(collection(db, 'comments'), {
-        postId: currentStory.id,
-        userId: user.uid,
-        username: userData?.username || 'Anonymous',
-        userProfilePic: userData?.profilePicUrl || '',
-        text: commentText.trim(),
-        timestamp: new Date()
-      });
+      if (!commentText.trim()) {
+        // LIKE STORY - when input is empty and heart is clicked
+        // Add like to story
+        await updateDoc(doc(db, 'posts', currentStory.id), {
+          likes: arrayUnion(user.uid)
+        });
 
-      // Update comments count on story
-      await updateDoc(doc(db, 'posts', currentStory.id), {
-        commentsCount: increment(1)
-      });
+        // Create notification for story author
+        await addDoc(collection(db, 'notifications'), {
+          userId: currentStory.userId,
+          type: 'like',
+          senderId: user.uid,
+          senderUsername: senderUsername,
+          senderProfilePic: senderProfilePic,
+          postId: currentStory.id,
+          postType: 'story',
+          message: `liked your story`,
+          timestamp: serverTimestamp(),
+          read: false
+        });
 
-      setCommentText('');
-      toast.success('Comment sent!');
+        toast.success('Story liked!');
+      } else {
+        // SEND MESSAGE - when input has text
+        const messageText = commentText.trim();
+        
+        // Generate chat ID (consistent for both users)
+        const getChatId = () => {
+          const ids = [user.uid, currentStory.userId].sort();
+          return `${ids[0]}_${ids[1]}`;
+        };
+        
+        const chatId = getChatId();
+        const chatRef = doc(db, 'chats', chatId);
+        
+        // Create or update chat document
+        const chatDoc = await getDoc(chatRef);
+        if (!chatDoc.exists()) {
+          await setDoc(chatRef, {
+            participants: [user.uid, currentStory.userId],
+            createdAt: serverTimestamp(),
+            lastMessage: messageText,
+            lastMessageTime: serverTimestamp(),
+            lastMessageSender: user.uid
+          });
+        } else {
+          await updateDoc(chatRef, {
+            lastMessage: messageText,
+            lastMessageTime: serverTimestamp(),
+            lastMessageSender: user.uid
+          });
+        }
+
+        // Add message to chat subcollection
+        const messagesRef = collection(db, 'chats', chatId, 'messages');
+        await addDoc(messagesRef, {
+          text: messageText,
+          senderId: user.uid,
+          timestamp: serverTimestamp(),
+          seenBy: [user.uid],
+          seenAt: null
+        });
+
+        // Create notification for recipient
+        await addDoc(collection(db, 'notifications'), {
+          userId: currentStory.userId,
+          type: 'message',
+          senderId: user.uid,
+          senderUsername: senderUsername,
+          senderProfilePic: senderProfilePic,
+          messagePreview: messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText,
+          timestamp: serverTimestamp(),
+          read: false
+        });
+
+        setCommentText('');
+        toast.success('Message sent!');
+      }
     } catch (error) {
-      console.error('Error sending comment:', error);
-      toast.error('Failed to send comment');
+      console.error('Error with story interaction:', error);
+      toast.error(commentText.trim() ? 'Failed to send message' : 'Failed to like story');
     } finally {
       setSendingComment(false);
     }
@@ -438,7 +501,7 @@ const StoryViewer = ({
       {/* Comment Input - Instagram Style */}
       {!isOwnStory && (
         <form 
-          onSubmit={handleSendComment}
+          onSubmit={handleStoryInteraction}
           className="absolute bottom-4 left-4 right-4 z-20 flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
         >
@@ -454,12 +517,17 @@ const StoryViewer = ({
           </div>
           <Button
             type="submit"
-            disabled={!commentText.trim() || sendingComment}
+            disabled={sendingComment}
             variant="ghost"
             size="icon"
             className="text-white hover:bg-white/20 disabled:opacity-50"
+            title={commentText.trim() ? 'Send message' : 'Like story'}
           >
-            <AiOutlineHeart size={24} className={commentText.trim() ? 'text-primary' : 'text-white'} />
+            {commentText.trim() ? (
+              <AiOutlineSend size={24} className="text-primary" />
+            ) : (
+              <AiOutlineHeart size={24} className="text-white" />
+            )}
           </Button>
         </form>
       )}
