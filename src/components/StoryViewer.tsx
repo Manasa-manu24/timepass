@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, getDoc, addDoc, collection, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { AiOutlineClose, AiOutlineLeft, AiOutlineRight, AiOutlineEye } from 'react-icons/ai';
+import { AiOutlineClose, AiOutlineLeft, AiOutlineRight, AiOutlineEye, AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { BsVolumeMute, BsVolumeUp } from 'react-icons/bs';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface Story {
   id: string;
@@ -43,6 +45,10 @@ const StoryViewer = ({
   const [isMuted, setIsMuted] = useState(true);
   const [viewersList, setViewersList] = useState<Array<{ uid: string; username: string; profilePicUrl?: string }>>([]);
   const [loadingViewers, setLoadingViewers] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -234,6 +240,43 @@ const StoryViewer = ({
     }
   };
 
+  const handleSendComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!commentText.trim() || !user) return;
+
+    setSendingComment(true);
+
+    try {
+      // Get user data
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data();
+
+      // Add comment to comments collection
+      await addDoc(collection(db, 'comments'), {
+        postId: currentStory.id,
+        userId: user.uid,
+        username: userData?.username || 'Anonymous',
+        userProfilePic: userData?.profilePicUrl || '',
+        text: commentText.trim(),
+        timestamp: new Date()
+      });
+
+      // Update comments count on story
+      await updateDoc(doc(db, 'posts', currentStory.id), {
+        commentsCount: increment(1)
+      });
+
+      setCommentText('');
+      toast.success('Comment sent!');
+    } catch (error) {
+      console.error('Error sending comment:', error);
+      toast.error('Failed to send comment');
+    } finally {
+      setSendingComment(false);
+    }
+  };
+
   if (!currentStory) return null;
 
   return (
@@ -390,6 +433,35 @@ const StoryViewer = ({
             <div className="w-1 h-12 bg-white rounded-full" />
           </div>
         </div>
+      )}
+
+      {/* Comment Input - Instagram Style */}
+      {!isOwnStory && (
+        <form 
+          onSubmit={handleSendComment}
+          className="absolute bottom-4 left-4 right-4 z-20 flex items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 flex items-center">
+            <Input
+              type="text"
+              placeholder="Send message"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              disabled={sendingComment}
+              className="bg-transparent border-0 text-white placeholder:text-white/70 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={!commentText.trim() || sendingComment}
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/20 disabled:opacity-50"
+          >
+            <AiOutlineHeart size={24} className={commentText.trim() ? 'text-primary' : 'text-white'} />
+          </Button>
+        </form>
       )}
     </div>
   );

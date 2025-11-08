@@ -271,15 +271,9 @@ const Profile = () => {
             <div className="flex gap-4 md:gap-8 mb-3 md:mb-4">
               <div className="flex flex-col md:flex-row md:gap-1">
                 <span className="font-semibold text-sm md:text-base">
-                  {posts.filter(post => !(post as any).isRepost && post.mediaType !== 'video').length}
+                  {posts.filter(post => !(post as any).isRepost).length}
                 </span>
                 <span className="text-muted-foreground text-xs md:text-base">posts</span>
-              </div>
-              <div className="flex flex-col md:flex-row md:gap-1">
-                <span className="font-semibold text-sm md:text-base">
-                  {posts.filter(post => !(post as any).isRepost && post.mediaType === 'video').length}
-                </span>
-                <span className="text-muted-foreground text-xs md:text-base">reels</span>
               </div>
               <button 
                 className="flex flex-col md:flex-row md:gap-1 hover:opacity-70 transition-opacity"
