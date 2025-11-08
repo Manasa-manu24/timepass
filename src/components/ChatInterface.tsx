@@ -13,7 +13,8 @@ import {
   updateDoc,
   arrayUnion,
   where,
-  getDocs
+  getDocs,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,9 +22,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AiOutlineSend, AiOutlineArrowLeft } from 'react-icons/ai';
-import { BsCheckAll } from 'react-icons/bs';
+import { BsCheckAll, BsThreeDots } from 'react-icons/bs';
+import { MdEdit, MdContentCopy, MdDelete } from 'react-icons/md';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Message {
   id: string;
@@ -32,6 +40,9 @@ interface Message {
   timestamp: any;
   seenBy?: string[]; // Array of user IDs who have seen this message
   seenAt?: any; // Timestamp when message was seen
+  isStoryReply?: boolean; // Flag if message is a reply to a story
+  storyId?: string; // Reference to the story being replied to
+  isEdited?: boolean; // Flag if message has been edited
 }
 
 interface ChatInterfaceProps {
@@ -46,6 +57,8 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -186,6 +199,51 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
     }
   };
 
+  const handleEditMessage = async (messageId: string, newText: string) => {
+    if (!newText.trim()) return;
+
+    try {
+      const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+      await updateDoc(messageRef, {
+        text: newText.trim(),
+        isEdited: true
+      });
+
+      setEditingMessageId(null);
+      setEditingText('');
+      toast.success('Message edited');
+    } catch (error) {
+      console.error('Error editing message:', error);
+      toast.error('Failed to edit message');
+    }
+  };
+
+  const handleCopyMessage = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Message copied to clipboard');
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+      await deleteDoc(messageRef);
+      toast.success('Message deleted');
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error('Failed to delete message');
+    }
+  };
+
+  const startEditing = (message: Message) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.text);
+  };
+
+  const cancelEditing = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+
   const getTimestampDate = (timestamp: any): Date => {
     if (!timestamp) return new Date();
     if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
@@ -234,31 +292,115 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
             messages.map((message) => {
               const isOwnMessage = message.senderId === user?.uid;
               const isSeen = message.seenBy && message.seenBy.length > 1; // More than just sender
+              const isEditing = editingMessageId === message.id;
               
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                  className={`flex group ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      isOwnMessage
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground'
-                    }`}
-                  >
-                    <p className="text-sm break-words">{message.text}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                        {formatDistanceToNow(getTimestampDate(message.timestamp), { addSuffix: true })}
-                      </p>
-                      {isOwnMessage && isSeen && (
-                        <div className="flex items-center gap-1">
-                          <BsCheckAll className={`text-sm ${isOwnMessage ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                          <span className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                            Seen
-                          </span>
-                        </div>
+                  <div className="relative">
+                    {/* Story Reply Indicator */}
+                    {message.isStoryReply && (
+                      <div className={`text-xs mb-1 flex items-center gap-1 ${
+                        isOwnMessage ? 'justify-end text-muted-foreground' : 'justify-start text-muted-foreground'
+                      }`}>
+                        <span className="italic">↩️ Replied to story</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                          isOwnMessage
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-foreground'
+                        }`}
+                      >
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              className="text-sm"
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleEditMessage(message.id, editingText)}
+                                disabled={!editingText.trim()}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={cancelEditing}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm break-words">{message.text}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                {formatDistanceToNow(getTimestampDate(message.timestamp), { addSuffix: true })}
+                              </p>
+                              {message.isEdited && (
+                                <span className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                  (edited)
+                                </span>
+                              )}
+                              {isOwnMessage && isSeen && (
+                                <div className="flex items-center gap-1">
+                                  <BsCheckAll className={`text-sm ${isOwnMessage ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                                  <span className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                    Seen
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      
+                      {/* Message Actions Menu */}
+                      {!isEditing && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                            >
+                              <BsThreeDots size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align={isOwnMessage ? "end" : "start"}>
+                            <DropdownMenuItem onClick={() => handleCopyMessage(message.text)}>
+                              <MdContentCopy className="mr-2" size={16} />
+                              Copy
+                            </DropdownMenuItem>
+                            {isOwnMessage && (
+                              <>
+                                <DropdownMenuItem onClick={() => startEditing(message)}>
+                                  <MdEdit className="mr-2" size={16} />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteMessage(message.id)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <MdDelete className="mr-2" size={16} />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>

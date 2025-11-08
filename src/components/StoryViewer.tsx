@@ -20,6 +20,7 @@ interface Story {
   mediaType?: 'image' | 'video';
   timestamp: any;
   viewed?: string[]; // Array of user IDs who viewed this story (optional for backwards compatibility)
+  likes?: string[]; // Array of user IDs who liked this story
   caption?: string;
 }
 
@@ -81,6 +82,14 @@ const StoryViewer = ({
     };
 
     markAsViewed();
+  }, [currentStory, user]);
+
+  // Check if user has liked the current story
+  useEffect(() => {
+    if (!user || !currentStory) return;
+    
+    const likesArray = currentStory.likes || [];
+    setIsLiked(likesArray.includes(user.uid));
   }, [currentStory, user]);
 
   // Fetch viewers information for own stories
@@ -261,6 +270,9 @@ const StoryViewer = ({
           likes: arrayUnion(user.uid)
         });
 
+        // Update local state immediately
+        setIsLiked(true);
+
         // Create notification for story author
         await addDoc(collection(db, 'notifications'), {
           userId: currentStory.userId,
@@ -314,7 +326,9 @@ const StoryViewer = ({
           senderId: user.uid,
           timestamp: serverTimestamp(),
           seenBy: [user.uid],
-          seenAt: null
+          seenAt: null,
+          isStoryReply: true, // Mark as story reply
+          storyId: currentStory.id // Reference to the story
         });
 
         // Create notification for recipient
@@ -508,7 +522,7 @@ const StoryViewer = ({
           <div className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 flex items-center">
             <Input
               type="text"
-              placeholder="Send message"
+              placeholder="Reply to story..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               disabled={sendingComment}
@@ -517,14 +531,16 @@ const StoryViewer = ({
           </div>
           <Button
             type="submit"
-            disabled={sendingComment}
+            disabled={sendingComment || (!commentText.trim() && isLiked)}
             variant="ghost"
             size="icon"
             className="text-white hover:bg-white/20 disabled:opacity-50"
-            title={commentText.trim() ? 'Send message' : 'Like story'}
+            title={commentText.trim() ? 'Send message' : isLiked ? 'Already liked' : 'Like story'}
           >
             {commentText.trim() ? (
               <AiOutlineSend size={24} className="text-primary" />
+            ) : isLiked ? (
+              <AiFillHeart size={24} className="text-red-500" />
             ) : (
               <AiOutlineHeart size={24} className="text-white" />
             )}
