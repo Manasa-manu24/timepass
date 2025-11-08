@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,8 @@ import DesktopSidebar from '@/components/DesktopSidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search as SearchIcon } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Search as SearchIcon, User as UserIcon } from 'lucide-react';
 import { AiOutlineArrowLeft } from 'react-icons/ai';
 import { BsCameraReels } from 'react-icons/bs';
 
@@ -27,13 +28,26 @@ interface Post {
   postType?: 'post' | 'reel' | 'story';
 }
 
+interface User {
+  uid: string;
+  username: string;
+  displayName: string;
+  profilePicUrl?: string;
+  followers?: string[];
+  following?: string[];
+  bio?: string;
+}
+
 const Search = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   // Fetch all posts and reels on mount (exclude stories)
   useEffect(() => {
@@ -63,26 +77,63 @@ const Search = () => {
     return () => unsubscribe();
   }, [user]);
 
-  // Filter posts when search query changes
+  // Fetch users when searching
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!user) return;
+      
+      setUsersLoading(true);
+      try {
+        const usersQuery = query(collection(db, 'users'));
+        const snapshot = await getDocs(usersQuery);
+        const usersData = snapshot.docs
+          .map(doc => ({
+            uid: doc.id,
+            ...doc.data()
+          }))
+          .filter(u => u.uid !== user.uid) as User[];
+        
+        setUsers(usersData);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [user]);
+
+  // Filter posts and users when search query changes
   useEffect(() => {
     if (searchQuery.trim().length === 0) {
       setFilteredPosts(allPosts);
+      setFilteredUsers([]);
       return;
     }
 
     const searchData = () => {
+      const query = searchQuery.toLowerCase();
+      
       // Filter posts by username or caption
-      const filtered = allPosts.filter(post => 
-        post.authorUsername?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.caption?.toLowerCase().includes(searchQuery.toLowerCase())
+      const filteredPostsData = allPosts.filter(post => 
+        post.authorUsername?.toLowerCase().includes(query) ||
+        post.caption?.toLowerCase().includes(query)
       );
       
-      setFilteredPosts(filtered);
+      // Filter users by username or displayName
+      const filteredUsersData = users.filter(u =>
+        u.username?.toLowerCase().includes(query) ||
+        u.displayName?.toLowerCase().includes(query)
+      );
+      
+      setFilteredPosts(filteredPostsData);
+      setFilteredUsers(filteredUsersData);
     };
 
     const debounce = setTimeout(searchData, 300);
     return () => clearTimeout(debounce);
-  }, [searchQuery, allPosts]);
+  }, [searchQuery, allPosts, users]);
 
   const handlePostClick = (post: Post) => {
     navigate(`/post/${post.id}`);
@@ -90,12 +141,17 @@ const Search = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar showBackButton />
+      <TopBar 
+        showBackButton 
+        isSearchPage={true}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
       <DesktopSidebar />
       
       <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0 pb-20 lg:pb-0">
         <div className="max-w-5xl mx-auto p-4">
-          {/* Desktop Back Button */}
+          {/* Desktop Back Button and Search */}
           <div className="hidden lg:flex items-center gap-3 mb-4">
             <Button
               variant="ghost"
@@ -108,8 +164,8 @@ const Search = () => {
             <h1 className="text-xl font-semibold">Explore</h1>
           </div>
 
-          {/* Search Input */}
-          <div className="relative mb-6">
+          {/* Desktop Search Input */}
+          <div className="hidden lg:block relative mb-6">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
               type="text"
@@ -120,15 +176,49 @@ const Search = () => {
             />
           </div>
 
-          {/* Results Count */}
-          {!loading && (
-            <div className="mb-4 text-sm text-muted-foreground">
-              {searchQuery ? (
-                <p>Found {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}</p>
-              ) : (
-                <p>{filteredPosts.length} post{filteredPosts.length !== 1 ? 's' : ''} and reel{filteredPosts.length !== 1 ? 's' : ''}</p>
-              )}
+          {/* User Results (when searching) */}
+          {searchQuery && filteredUsers.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <UserIcon size={20} />
+                Accounts
+              </h2>
+              <div className="space-y-2 bg-card rounded-lg border border-border overflow-hidden">
+                {filteredUsers.map((userItem) => (
+                  <Link
+                    key={userItem.uid}
+                    to={`/profile/${userItem.uid}`}
+                    className="flex items-center gap-3 p-4 hover:bg-accent transition-all duration-200 hover:scale-[1.01] border-b border-border last:border-b-0"
+                  >
+                    <Avatar className="w-14 h-14 border-2 border-primary/20">
+                      <AvatarImage src={userItem.profilePicUrl} alt={userItem.username} />
+                      <AvatarFallback className="text-lg font-semibold">
+                        {userItem.username?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{userItem.username}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {userItem.displayName}
+                      </p>
+                      {userItem.followers && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {userItem.followers.length} follower{userItem.followers.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* Posts Section Header (when searching and has posts) */}
+          {searchQuery && filteredPosts.length > 0 && (
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <SearchIcon size={20} />
+              Posts & Reels
+            </h2>
           )}
 
           {/* Posts Grid */}
@@ -140,11 +230,18 @@ const Search = () => {
                 </div>
               ))}
             </div>
+          ) : filteredPosts.length === 0 && filteredUsers.length === 0 && searchQuery ? (
+            <div className="text-center py-12">
+              <SearchIcon size={64} className="mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                No users or posts found matching your search
+              </p>
+            </div>
           ) : filteredPosts.length === 0 ? (
             <div className="text-center py-12">
               <SearchIcon size={64} className="mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                {searchQuery ? 'No posts found matching your search' : 'No posts available yet'}
+                No posts available yet
               </p>
             </div>
           ) : (
