@@ -13,6 +13,7 @@ import Profile from "./pages/Profile";
 import Explore from "./pages/Explore";
 import Notifications from "./pages/Notifications";
 import Reels from "./pages/Reels";
+import ReelsView from "./pages/ReelsView";
 import Search from "./pages/Search";
 import PostDetail from "./pages/PostDetail";
 import Messages from "./pages/Messages";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
+              <Route path="/reels-view/:postId?" element={<ProtectedRoute><ReelsView /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
               <Route path="/post/:postId" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
               <Route path="/create" element={<ProtectedRoute><Create /></ProtectedRoute>} />

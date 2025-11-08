@@ -136,7 +136,13 @@ const Search = () => {
   }, [searchQuery, allPosts, users]);
 
   const handlePostClick = (post: Post) => {
-    navigate(`/post/${post.id}`);
+    // Navigate to reels view for full-screen display
+    navigate(`/reels-view/${post.id}`, {
+      state: {
+        posts: filteredPosts,
+        startPostId: post.id
+      }
+    });
   };
 
   return (

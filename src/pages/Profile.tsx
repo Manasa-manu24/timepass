@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import EditProfileDialog from '@/components/EditProfileDialog';
+import FollowersDialog from '@/components/FollowersDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,8 @@ const Profile = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'reposted'>('posts');
+  const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
+  const [followingDialogOpen, setFollowingDialogOpen] = useState(false);
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -270,14 +273,20 @@ const Profile = () => {
                 </span>
                 <span className="text-muted-foreground text-xs md:text-base">posts</span>
               </div>
-              <div className="flex flex-col md:flex-row md:gap-1">
+              <button 
+                className="flex flex-col md:flex-row md:gap-1 hover:opacity-70 transition-opacity"
+                onClick={() => setFollowersDialogOpen(true)}
+              >
                 <span className="font-semibold text-sm md:text-base">{profile.followers.length}</span>
                 <span className="text-muted-foreground text-xs md:text-base">followers</span>
-              </div>
-              <div className="flex flex-col md:flex-row md:gap-1">
+              </button>
+              <button 
+                className="flex flex-col md:flex-row md:gap-1 hover:opacity-70 transition-opacity"
+                onClick={() => setFollowingDialogOpen(true)}
+              >
                 <span className="font-semibold text-sm md:text-base">{profile.following.length}</span>
                 <span className="text-muted-foreground text-xs md:text-base">following</span>
-              </div>
+              </button>
             </div>
 
             {/* Bio - Hidden on small mobile, show on slightly larger screens */}
@@ -454,6 +463,24 @@ const Profile = () => {
       </main>
 
       <MobileBottomNav />
+
+      {/* Followers Dialog */}
+      <FollowersDialog
+        open={followersDialogOpen}
+        onOpenChange={setFollowersDialogOpen}
+        userIds={profile.followers}
+        title="Followers"
+        currentProfileUserId={userId!}
+      />
+
+      {/* Following Dialog */}
+      <FollowersDialog
+        open={followingDialogOpen}
+        onOpenChange={setFollowingDialogOpen}
+        userIds={profile.following}
+        title="Following"
+        currentProfileUserId={userId!}
+      />
     </div>
   );
 };

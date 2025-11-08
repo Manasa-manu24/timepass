@@ -19,6 +19,7 @@ interface ReelPlayerProps {
     authorProfilePic?: string;
     caption: string;
     mediaUrl: string;
+    mediaType?: 'image' | 'video';
     likes: string[];
     commentsCount: number;
   };
@@ -34,6 +35,9 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
   const [commentsOpen, setCommentsOpen] = useState(false);
 
   useEffect(() => {
+    // Only handle video playback if it's a video
+    if (reel.mediaType === 'image') return;
+    
     const video = videoRef.current;
     if (!video) return;
 
@@ -52,7 +56,7 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
     } else {
       video.pause();
     }
-  }, [isActive, hasViewed]);
+  }, [isActive, hasViewed, reel.mediaType]);
 
   const handleLike = async () => {
     if (!user) return;
@@ -185,15 +189,23 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
 
   return (
     <div className="relative w-full h-full bg-black">
-      {/* Video */}
-      <video
-        ref={videoRef}
-        src={reel.mediaUrl}
-        className="w-full h-full object-contain"
-        loop
-        muted={isMuted}
-        playsInline
-      />
+      {/* Media - Image or Video */}
+      {reel.mediaType === 'image' ? (
+        <img
+          src={reel.mediaUrl}
+          alt={reel.caption}
+          className="w-full h-full object-contain"
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          src={reel.mediaUrl}
+          className="w-full h-full object-contain"
+          loop
+          muted={isMuted}
+          playsInline
+        />
+      )}
 
       {/* Gradient Overlays */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
@@ -249,17 +261,20 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           <AiOutlineSend size={30} className="text-white lg:w-8 lg:h-8" />
         </button>
 
-        <button 
-          onClick={toggleMute}
-          className="flex flex-col items-center gap-1"
-          aria-label={isMuted ? 'Unmute' : 'Mute'}
-        >
-          {isMuted ? (
-            <BsVolumeMute size={26} className="text-white lg:w-7 lg:h-7" />
-          ) : (
-            <BsVolumeUp size={26} className="text-white lg:w-7 lg:h-7" />
-          )}
-        </button>
+        {/* Only show mute button for videos */}
+        {reel.mediaType !== 'image' && (
+          <button 
+            onClick={toggleMute}
+            className="flex flex-col items-center gap-1"
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
+          >
+            {isMuted ? (
+              <BsVolumeMute size={26} className="text-white lg:w-7 lg:h-7" />
+            ) : (
+              <BsVolumeUp size={26} className="text-white lg:w-7 lg:h-7" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Bottom Info - Username and Caption - Adjusted for mobile bottom nav */}
