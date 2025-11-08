@@ -2,11 +2,15 @@ import { useEffect, useState } from 'react';
 import { collection, query, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import Stories from '@/components/Stories';
 import PostCard from '@/components/PostCard';
+import PostCardSkeleton from '@/components/PostCardSkeleton';
+import EmptyState from '@/components/EmptyState';
+import { AiOutlinePlusCircle, AiOutlineCamera } from 'react-icons/ai';
 
 interface Post {
   id: string;
@@ -24,6 +28,7 @@ interface Post {
 
 const Home = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
@@ -165,24 +170,35 @@ const Home = () => {
         {/* Posts Section - Full width on mobile, padded on desktop */}
         <div className="lg:px-4">
           {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading posts...</p>
+            // Skeleton loaders for better perceived performance
+            <div className="space-y-0 lg:space-y-6">
+              {[1, 2, 3].map((i) => (
+                <PostCardSkeleton key={i} />
+              ))}
             </div>
           ) : posts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
-            </div>
+            // Enhanced empty state with better UX
+            <EmptyState
+              icon={<AiOutlineCamera size={64} />}
+              title="No Posts Yet"
+              description="Be the first to share something amazing with the community! Start by uploading your first photo or video."
+              actionLabel="Create Post"
+              onAction={() => navigate('/create')}
+            />
           ) : (
-            posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                currentUserId={user?.uid}
-                onLike={handleLike}
-                savedPosts={savedPosts}
-                onSaveToggle={handleSaveToggle}
-              />
-            ))
+            // Posts with smooth fade-in animation
+            <div className="animate-in fade-in duration-500">
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  currentUserId={user?.uid}
+                  onLike={handleLike}
+                  savedPosts={savedPosts}
+                  onSaveToggle={handleSaveToggle}
+                />
+              ))}
+            </div>
           )}
         </div>
       </main>

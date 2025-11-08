@@ -42,13 +42,13 @@ const DesktopSidebar = () => {
     const IconComponent = active && ActiveIcon ? ActiveIcon : Icon;
 
     const content = (
-      <div className={`flex items-center gap-4 px-3 py-3 rounded-lg hover:bg-accent transition-colors ${active ? 'font-semibold' : ''}`}>
+      <div className={`flex items-center gap-4 px-3 py-3 rounded-xl hover:bg-accent transition-all duration-200 active:scale-95 ${active ? 'font-semibold bg-accent/50' : ''}`}>
         <div className="relative">
-          <IconComponent size={28} />
+          <IconComponent size={28} className={active ? 'text-primary' : ''} />
           {badge !== undefined && badge > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-0 px-1 text-xs"
+              className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-0 px-1 text-xs animate-in zoom-in"
             >
               {badge > 99 ? '99+' : badge}
             </Badge>
@@ -75,10 +75,10 @@ const DesktopSidebar = () => {
 
   return (
     <>
-      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-64 xl:w-72 bg-card border-r border-border z-40">
+      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-64 xl:w-72 bg-card/95 backdrop-blur-xl border-r border-border z-40 shadow-sm">
         <div className="flex flex-col h-full p-3">
           {/* Logo */}
-          <Link to="/" className="text-2xl font-bold px-3 py-6">
+          <Link to="/" className="text-2xl font-bold px-3 py-6 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
             Timepass
           </Link>
 
@@ -93,7 +93,7 @@ const DesktopSidebar = () => {
             {/* Upload Button - Prominent */}
             <button
               onClick={() => setUploadOpen(true)}
-              className="w-full px-3 py-3 mt-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+              className="w-full px-3 py-3 mt-2 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 active:scale-95 font-medium"
               aria-label="Create new post"
             >
               <div className="flex items-center gap-4">

@@ -144,12 +144,12 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl">
-          <SheetHeader>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl flex flex-col">
+          <SheetHeader className="flex-shrink-0">
             <SheetTitle>Create New Post</SheetTitle>
           </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="flex-1 overflow-y-auto mt-6 space-y-6 px-1">
           {/* Post Type Selection */}
           <div className="flex gap-4">
             <Button
@@ -259,8 +259,8 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-4">
+          {/* Actions - Inside scrollable area with padding at bottom */}
+          <div className="flex gap-4 pb-6">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}

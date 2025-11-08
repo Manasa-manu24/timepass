@@ -231,12 +231,12 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
       </div>
 
       {/* Post Media */}
-      <div className="w-full aspect-square bg-white flex items-center justify-center">
+      <div className="w-full aspect-square bg-muted flex items-center justify-center relative overflow-hidden group">
         {post.mediaType === 'image' ? (
           <img
             src={post.mediaUrl}
             alt={post.caption}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <video
@@ -255,10 +255,10 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
               variant="ghost"
               size="icon"
               onClick={handleLike}
-              className="hover:opacity-70"
+              className="hover:scale-110 transition-transform duration-200"
             >
               {isLiked ? (
-                <AiFillHeart size={24} className="text-destructive" />
+                <AiFillHeart size={24} className="text-destructive animate-in zoom-in duration-200" />
               ) : (
                 <AiOutlineHeart size={24} />
               )}
@@ -266,7 +266,7 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
             <Button 
               variant="ghost" 
               size="icon" 
-              className="hover:opacity-70"
+              className="hover:scale-110 transition-transform duration-200"
               onClick={() => setCommentsOpen(true)}
             >
               <AiOutlineComment size={24} />
@@ -274,7 +274,7 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
             <Button 
               variant="ghost" 
               size="icon" 
-              className="hover:opacity-70"
+              className="hover:scale-110 transition-transform duration-200"
               onClick={handleShare}
             >
               <AiOutlineSend size={24} />
@@ -283,7 +283,7 @@ const PostCard = ({ post, currentUserId, onLike, savedPosts = [], onSaveToggle }
           <Button 
             variant="ghost" 
             size="icon" 
-            className="hover:opacity-70"
+            className="hover:scale-110 transition-transform duration-200"
             onClick={handleSave}
           >
             {isSaved ? (

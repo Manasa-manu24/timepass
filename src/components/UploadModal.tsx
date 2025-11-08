@@ -116,12 +116,12 @@ const UploadModal = ({ open, onOpenChange }: UploadModalProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Create New Post</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6 px-1">
             <div className="flex gap-4">
               <Button
                 variant={postType === 'post' ? 'default' : 'outline'}
@@ -237,7 +237,7 @@ const UploadModal = ({ open, onOpenChange }: UploadModalProps) => {
             </div>
           )}
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 pb-4">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}

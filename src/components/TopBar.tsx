@@ -14,7 +14,7 @@ const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: bo
   const { unreadCount: notificationCount } = useUnreadNotifications();
 
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card/95 backdrop-blur-md border-b border-border z-50">
+    <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card/98 backdrop-blur-xl border-b border-border z-50 shadow-sm">
       <div className="flex items-center justify-between h-full px-4">
         {/* Left - Back Button or Logo */}
         {showBackButton ? (
@@ -23,11 +23,12 @@ const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: bo
             size="icon"
             onClick={() => navigate('/')}
             aria-label="Back to home"
+            className="hover:bg-accent transition-all duration-200 active:scale-95"
           >
             <AiOutlineArrowLeft size={24} />
           </Button>
         ) : (
-          <Link to="/" className="text-xl font-bold">
+          <Link to="/" className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
             Timepass
           </Link>
         )}
@@ -38,12 +39,12 @@ const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: bo
         )}
 
         {/* Right - Theme Toggle, Notifications & Messages */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="hover:bg-accent"
+            className="hover:bg-accent transition-all duration-200 active:scale-95"
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? (
@@ -55,13 +56,13 @@ const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: bo
 
           <Link 
             to="/notifications" 
-            className="relative hover:opacity-70 transition"
+            className="relative hover:opacity-80 transition-all duration-200 active:scale-95 p-2"
             aria-label={`Notifications ${notificationCount > 0 ? `(${notificationCount} unread)` : ''}`}
           >
             <AiOutlineHeart size={24} />
             {notificationCount > 0 && (
               <span 
-                className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs flex items-center justify-center rounded-full"
+                className="absolute top-0 right-0 w-5 h-5 bg-destructive text-destructive-foreground text-xs flex items-center justify-center rounded-full font-semibold animate-in zoom-in"
                 aria-live="polite"
               >
                 {notificationCount > 9 ? '9+' : notificationCount}
@@ -71,13 +72,13 @@ const TopBar = ({ title, showBackButton }: { title?: string; showBackButton?: bo
 
           <Link 
             to="/messages" 
-            className="relative hover:opacity-70 transition"
+            className="relative hover:opacity-80 transition-all duration-200 active:scale-95 p-2"
             aria-label={`Messages ${messageCount > 0 ? `(${messageCount} unread)` : ''}`}
           >
             <AiOutlineSend size={24} />
             {messageCount > 0 && (
               <span 
-                className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs flex items-center justify-center rounded-full"
+                className="absolute top-0 right-0 w-5 h-5 bg-destructive text-destructive-foreground text-xs flex items-center justify-center rounded-full font-semibold animate-in zoom-in"
                 aria-live="polite"
               >
                 {messageCount > 9 ? '9+' : messageCount}
