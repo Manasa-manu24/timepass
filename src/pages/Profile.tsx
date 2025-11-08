@@ -6,11 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import EditProfileDialog from '@/components/EditProfileDialog';
-import PostViewerModal from '@/components/PostViewerModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BsGrid3X3, BsCameraReels } from 'react-icons/bs';
+import { BiRepost } from 'react-icons/bi';
 import { AiOutlineSend, AiOutlineShareAlt, AiOutlineSetting } from 'react-icons/ai';
 import { toast } from 'sonner';
 
@@ -44,10 +44,9 @@ const Profile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'reposted'>('posts');
 
   const fetchProfile = async () => {
     if (!userId) return;
@@ -59,7 +58,7 @@ const Profile = () => {
         setProfile(userDoc.data() as UserProfile);
       }
 
-      // Fetch user posts
+      // Fetch user posts (including both original posts and reposts)
       const postsQuery = query(
         collection(db, 'posts'),
         where('authorId', '==', userId)
@@ -105,13 +104,8 @@ const Profile = () => {
   }, [currentUser, userId]);
 
   const handlePostClick = (post: Post) => {
-    setSelectedPost(post);
-    setIsViewerOpen(true);
-  };
-
-  const handlePostDeleted = () => {
-    // Refresh the profile to update posts
-    fetchProfile();
+    // Navigate to post detail page (like Home page does)
+    navigate(`/post/${post.id}`);
   };
 
   const handleFollow = async () => {
@@ -229,6 +223,11 @@ const Profile = () => {
 
   const isOwnProfile = currentUser?.uid === userId;
 
+  // Filter posts based on active tab
+  const displayedPosts = activeTab === 'posts' 
+    ? posts.filter(post => !(post as any).isRepost)  // Original posts only
+    : posts.filter(post => (post as any).isRepost);   // Reposted content only
+
   return (
     <div className="min-h-screen bg-background">
       {/* TopBar hidden on Profile page for cleaner immersive experience */}
@@ -266,7 +265,9 @@ const Profile = () => {
             {/* Stats - Horizontal layout on all screen sizes */}
             <div className="flex gap-4 md:gap-8 mb-3 md:mb-4">
               <div className="flex flex-col md:flex-row md:gap-1">
-                <span className="font-semibold text-sm md:text-base">{posts.length}</span>
+                <span className="font-semibold text-sm md:text-base">
+                  {posts.filter(post => !(post as any).isRepost).length}
+                </span>
                 <span className="text-muted-foreground text-xs md:text-base">posts</span>
               </div>
               <div className="flex flex-col md:flex-row md:gap-1">
@@ -358,22 +359,43 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Posts Grid */}
+        {/* Posts Grid with Tabs */}
         <div className="border-t border-border pt-4">
-          <div className="flex justify-center mb-4">
-            <button className="flex items-center gap-2 px-4 py-2 border-t-2 border-foreground">
-              <BsGrid3X3 />
+          <div className="flex justify-center gap-12 mb-4">
+            <button 
+              className={`flex items-center gap-2 px-4 py-2 transition-colors ${
+                activeTab === 'posts' 
+                  ? 'border-t-2 border-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('posts')}
+            >
+              <BsGrid3X3 size={16} />
               <span className="text-xs font-semibold uppercase">Posts</span>
+            </button>
+            
+            <button 
+              className={`flex items-center gap-2 px-4 py-2 transition-colors ${
+                activeTab === 'reposted' 
+                  ? 'border-t-2 border-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('reposted')}
+            >
+              <BiRepost size={18} />
+              <span className="text-xs font-semibold uppercase">Reposted</span>
             </button>
           </div>
 
-          {posts.length === 0 ? (
+          {displayedPosts.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No posts yet</p>
+              <p className="text-muted-foreground">
+                {activeTab === 'posts' ? 'No posts yet' : 'No reposts yet'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-1 md:gap-4">
-              {posts.map((post) => (
+              {displayedPosts.map((post) => (
                 <div
                   key={post.id}
                   className="aspect-square bg-secondary cursor-pointer group relative overflow-hidden"
@@ -391,14 +413,28 @@ const Profile = () => {
                       <div className="absolute top-2 right-2 z-10">
                         <BsCameraReels className="text-white drop-shadow-lg" size={20} />
                       </div>
+                      {/* Repost indicator for reposted content */}
+                      {(post as any).isRepost && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <BiRepost className="text-white drop-shadow-lg" size={20} />
+                        </div>
+                      )}
                     </>
                   ) : (
-                    <img
-                      src={post.mediaUrl}
-                      alt="Post"
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                    <>
+                      <img
+                        src={post.mediaUrl}
+                        alt="Post"
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      {/* Repost indicator for reposted content */}
+                      {(post as any).isRepost && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <BiRepost className="text-white drop-shadow-lg" size={20} />
+                        </div>
+                      )}
+                    </>
                   )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white">
                     <div className="flex items-center gap-2">
@@ -418,18 +454,6 @@ const Profile = () => {
       </main>
 
       <MobileBottomNav />
-
-      <PostViewerModal
-        post={selectedPost}
-        isOpen={isViewerOpen}
-        onClose={() => {
-          setIsViewerOpen(false);
-          setSelectedPost(null);
-        }}
-        currentUserId={currentUser?.uid}
-        isOwnPost={isOwnProfile}
-        onPostDeleted={handlePostDeleted}
-      />
     </div>
   );
 };
