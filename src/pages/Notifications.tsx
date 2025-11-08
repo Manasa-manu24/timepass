@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
@@ -30,6 +30,7 @@ const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasMarkedAsRead = useRef(false); // Track if we've already marked notifications as read
 
   useEffect(() => {
     if (!user) return;
@@ -56,36 +57,50 @@ const Notifications = () => {
     return () => unsubscribe();
   }, [user]);
 
-  // Mark all unread notifications as read when page loads
+  // Mark all unread notifications as read when component mounts
   useEffect(() => {
-    if (!user || notifications.length === 0) return;
+    if (!user || loading || hasMarkedAsRead.current) return;
 
     const markAllAsRead = async () => {
       try {
-        const unreadNotifs = notifications.filter(notif => !notif.read);
+        // Query for unread notifications
+        const unreadQuery = query(
+          collection(db, 'notifications'),
+          where('userId', '==', user.uid),
+          where('read', '==', false)
+        );
+
+        const unreadSnapshot = await getDocs(unreadQuery);
         
-        if (unreadNotifs.length === 0) return;
+        if (unreadSnapshot.empty) {
+          hasMarkedAsRead.current = true;
+          return;
+        }
 
         // Use batch write for better performance
         const batch = writeBatch(db);
-        unreadNotifs.forEach(notif => {
-          const notifRef = doc(db, 'notifications', notif.id);
-          batch.update(notifRef, { read: true });
+        unreadSnapshot.docs.forEach(docSnap => {
+          // Only mark non-message notifications as read (since we filter them out)
+          const data = docSnap.data();
+          if (data.type !== 'message') {
+            batch.update(docSnap.ref, { read: true });
+          }
         });
         
         await batch.commit();
+        hasMarkedAsRead.current = true;
       } catch (error) {
         console.error('Error marking notifications as read:', error);
       }
     };
 
-    // Small delay to ensure the notification count is visible before clearing
+    // Small delay to ensure smooth UI experience
     const timer = setTimeout(() => {
       markAllAsRead();
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [user, notifications]);
+  }, [user, loading]);
 
   const markAsRead = async (notifId: string) => {
     try {

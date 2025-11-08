@@ -15,7 +15,7 @@ export const useUnreadNotifications = () => {
       return;
     }
 
-    // Listen to unread notifications
+    // Listen to unread notifications (excluding messages since they're shown separately)
     const notifQuery = query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),
@@ -23,7 +23,12 @@ export const useUnreadNotifications = () => {
     );
 
     const unsubscribe = onSnapshot(notifQuery, (snapshot) => {
-      setUnreadCount(snapshot.docs.length);
+      // Filter out message notifications since they're not shown in Notifications page
+      const nonMessageNotifs = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.type !== 'message';
+      });
+      setUnreadCount(nonMessageNotifs.length);
       setLoading(false);
     });
 
