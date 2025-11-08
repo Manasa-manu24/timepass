@@ -14,6 +14,7 @@ import Explore from "./pages/Explore";
 import Notifications from "./pages/Notifications";
 import Reels from "./pages/Reels";
 import Search from "./pages/Search";
+import PostDetail from "./pages/PostDetail";
 import Messages from "./pages/Messages";
 import Saved from "./pages/Saved";
 import Settings from "./pages/Settings";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+              <Route path="/post/:postId" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
               <Route path="/create" element={<ProtectedRoute><Create /></ProtectedRoute>} />
               <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />

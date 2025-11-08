@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
@@ -8,133 +8,85 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Link } from 'react-router-dom';
-import { Search as SearchIcon, Clock, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search as SearchIcon } from 'lucide-react';
 import { AiOutlineArrowLeft } from 'react-icons/ai';
-
-interface User {
-  uid: string;
-  username: string;
-  displayName: string;
-  profilePicUrl: string;
-  followers: string[];
-}
+import { BsCameraReels } from 'react-icons/bs';
 
 interface Post {
   id: string;
+  authorId: string;
+  authorUsername: string;
+  authorProfilePic?: string;
   mediaUrl: string;
+  mediaType: 'image' | 'video';
+  caption: string;
   likes: string[];
   commentsCount: number;
+  timestamp: any;
+  postType?: 'post' | 'reel' | 'story';
 }
 
 const Search = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load search history from localStorage on mount
+  // Fetch all posts and reels on mount (exclude stories)
   useEffect(() => {
-    if (user) {
-      const historyKey = `search_history_${user.uid}`;
-      const savedHistory = localStorage.getItem(historyKey);
-      if (savedHistory) {
-        setSearchHistory(JSON.parse(savedHistory));
-      }
-    }
-  }, [user]);
-
-  // Save search to history
-  const saveToHistory = (query: string) => {
-    if (!user || !query.trim()) return;
-    
-    const historyKey = `search_history_${user.uid}`;
-    const updatedHistory = [
-      query.trim(),
-      ...searchHistory.filter(item => item !== query.trim())
-    ].slice(0, 10); // Keep only last 10 searches
-    
-    setSearchHistory(updatedHistory);
-    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
-  };
-
-  // Remove item from history
-  const removeFromHistory = (query: string) => {
     if (!user) return;
-    
-    const historyKey = `search_history_${user.uid}`;
-    const updatedHistory = searchHistory.filter(item => item !== query);
-    
-    setSearchHistory(updatedHistory);
-    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
-  };
 
-  // Clear all history
-  const clearHistory = () => {
-    if (!user) return;
-    
-    const historyKey = `search_history_${user.uid}`;
-    setSearchHistory([]);
-    localStorage.removeItem(historyKey);
-  };
+    setLoading(true);
+    const postsQuery = query(
+      collection(db, 'posts'),
+      orderBy('timestamp', 'desc')
+    );
 
-  useEffect(() => {
-    if (searchQuery.trim().length < 2) {
-      setUsers([]);
-      setPosts([]);
-      return;
-    }
-
-    const searchData = async () => {
-      setLoading(true);
-      try {
-        // Save to history when user searches
-        saveToHistory(searchQuery);
-
-        // Search users
-        const usersQuery = query(
-          collection(db, 'users'),
-          orderBy('username'),
-          limit(20)
-        );
-        const usersSnapshot = await getDocs(usersQuery);
-        const usersData = usersSnapshot.docs
-          .map(doc => ({ uid: doc.id, ...doc.data() } as User))
-          .filter(user => 
-            user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.displayName.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        
-        setUsers(usersData);
-
-        // Search posts (you could add hashtag search here)
-        const postsQuery = query(
-          collection(db, 'posts'),
-          orderBy('timestamp', 'desc'),
-          limit(30)
-        );
-        const postsSnapshot = await getDocs(postsQuery);
-        const postsData = postsSnapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
+      const postsData = snapshot.docs
+        .map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Post[];
-        
-        setPosts(postsData);
-      } catch (error) {
-        console.error('Search error:', error);
-      } finally {
-        setLoading(false);
-      }
+      
+      // Filter out stories - only show posts and reels
+      const filteredData = postsData.filter(post => post.postType !== 'story');
+      
+      setAllPosts(filteredData);
+      setFilteredPosts(filteredData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Filter posts when search query changes
+  useEffect(() => {
+    if (searchQuery.trim().length === 0) {
+      setFilteredPosts(allPosts);
+      return;
+    }
+
+    const searchData = () => {
+      // Filter posts by username or caption
+      const filtered = allPosts.filter(post => 
+        post.authorUsername?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.caption?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      
+      setFilteredPosts(filtered);
     };
 
     const debounce = setTimeout(searchData, 300);
     return () => clearTimeout(debounce);
-  }, [searchQuery]);
+  }, [searchQuery, allPosts]);
+
+  const handlePostClick = (post: Post) => {
+    navigate(`/post/${post.id}`);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,7 +94,7 @@ const Search = () => {
       <DesktopSidebar />
       
       <main className="lg:ml-64 xl:ml-72 pt-14 lg:pt-0 pb-20 lg:pb-0">
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-5xl mx-auto p-4">
           {/* Desktop Back Button */}
           <div className="hidden lg:flex items-center gap-3 mb-4">
             <Button
@@ -153,7 +105,7 @@ const Search = () => {
             >
               <AiOutlineArrowLeft size={24} />
             </Button>
-            <h1 className="text-xl font-semibold">Search</h1>
+            <h1 className="text-xl font-semibold">Explore</h1>
           </div>
 
           {/* Search Input */}
@@ -161,139 +113,81 @@ const Search = () => {
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
               type="text"
-              placeholder="Search users and hashtags..."
+              placeholder="Search by username or caption..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-secondary"
-              autoFocus
             />
           </div>
 
-          {searchQuery.trim().length > 0 && (
-            <Tabs defaultValue="users" className="w-full">
-              <TabsList className="w-full">
-                <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
-                <TabsTrigger value="posts" className="flex-1">Posts</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="users" className="mt-6">
-                {loading ? (
-                  <p className="text-center text-muted-foreground py-8">Searching...</p>
-                ) : users.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No users found</p>
-                ) : (
-                  <div className="space-y-4">
-                    {users.map((user) => (
-                      <Link
-                        key={user.uid}
-                        to={`/profile/${user.uid}`}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition"
-                      >
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={user.profilePicUrl} />
-                          <AvatarFallback>{user.username[0].toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">{user.username}</p>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {user.displayName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {user.followers.length} followers
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="posts" className="mt-6">
-                {loading ? (
-                  <p className="text-center text-muted-foreground py-8">Searching...</p>
-                ) : posts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No posts found</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1 md:gap-2">
-                    {posts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="aspect-square bg-secondary cursor-pointer group relative overflow-hidden"
-                      >
-                        <img
-                          src={post.mediaUrl}
-                          alt="Post"
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white">
-                          <div className="flex items-center gap-2">
-                            <span>❤️</span>
-                            <span className="font-semibold">{post.likes.length}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>💬</span>
-                            <span className="font-semibold">{post.commentsCount}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+          {/* Results Count */}
+          {!loading && (
+            <div className="mb-4 text-sm text-muted-foreground">
+              {searchQuery ? (
+                <p>Found {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}</p>
+              ) : (
+                <p>{filteredPosts.length} post{filteredPosts.length !== 1 ? 's' : ''} and reel{filteredPosts.length !== 1 ? 's' : ''}</p>
+              )}
+            </div>
           )}
 
-          {searchQuery.trim().length === 0 && (
-            <div className="space-y-6">
-              {/* Search History */}
-              {searchHistory.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">Recent Searches</h2>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearHistory}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      Clear all
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {searchHistory.map((historyItem, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition group"
-                      >
-                        <Clock size={20} className="text-muted-foreground" />
-                        <button
-                          onClick={() => setSearchQuery(historyItem)}
-                          className="flex-1 text-left truncate"
-                        >
-                          {historyItem}
-                        </button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeFromHistory(historyItem)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X size={16} />
-                        </Button>
+          {/* Posts Grid */}
+          {loading ? (
+            <div className="grid grid-cols-3 gap-1 md:gap-4">
+              {[...Array(9)].map((_, i) => (
+                <div key={i} className="aspect-square">
+                  <Skeleton className="w-full h-full" />
+                </div>
+              ))}
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="text-center py-12">
+              <SearchIcon size={64} className="mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                {searchQuery ? 'No posts found matching your search' : 'No posts available yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-1 md:gap-4 animate-in fade-in duration-300">
+              {filteredPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="aspect-square bg-secondary cursor-pointer group relative overflow-hidden rounded-sm"
+                  onClick={() => handlePostClick(post)}
+                >
+                  {post.mediaType === 'video' || post.postType === 'reel' ? (
+                    <>
+                      <video
+                        src={post.mediaUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                      />
+                      {/* Video/Reel indicator overlay */}
+                      <div className="absolute top-2 right-2 z-10">
+                        <BsCameraReels className="text-white drop-shadow-lg" size={20} />
                       </div>
-                    ))}
+                    </>
+                  ) : (
+                    <img
+                      src={post.mediaUrl}
+                      alt="Post"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white">
+                    <div className="flex items-center gap-2">
+                      <span>❤️</span>
+                      <span className="font-semibold">{post.likes.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>💬</span>
+                      <span className="font-semibold">{post.commentsCount}</span>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* Empty State */}
-              {searchHistory.length === 0 && (
-                <div className="text-center py-12">
-                  <SearchIcon size={64} className="mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Search for users and posts</p>
-                </div>
-              )}
+              ))}
             </div>
           )}
         </div>
