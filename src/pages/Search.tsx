@@ -194,7 +194,7 @@ const Search = () => {
                   <Link
                     key={userItem.uid}
                     to={`/profile/${userItem.uid}`}
-                    className="flex items-center gap-3 p-4 hover:bg-accent transition-all duration-200 hover:scale-[1.01] border-b border-border last:border-b-0"
+                    className="flex items-center gap-3 p-4 hover:bg-accent transition-all duration-200 border-b border-border last:border-b-0"
                   >
                     <Avatar className="w-14 h-14 border-2 border-primary/20">
                       <AvatarImage src={userItem.profilePicUrl} alt={userItem.username} />
