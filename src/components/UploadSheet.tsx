@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { processMediaFiles } from '@/lib/mediaProcessor';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,10 +82,15 @@ const UploadSheet = ({ open, onOpenChange, defaultMode = 'post' }: UploadSheetPr
     setUploadProgress(0);
 
     try {
+      // Process files for aspect ratio
+      toast.info('Processing media files...');
+      const processedFiles = await processMediaFiles(selectedFiles);
+      
       // Upload files to Cloudinary
-      const uploadPromises = selectedFiles.map(async (file, index) => {
+      toast.info('Uploading...');
+      const uploadPromises = processedFiles.map(async (file, index) => {
         const url = await uploadToCloudinary(file);
-        setUploadProgress(((index + 1) / selectedFiles.length) * 100);
+        setUploadProgress(((index + 1) / processedFiles.length) * 100);
         return url;
       });
 

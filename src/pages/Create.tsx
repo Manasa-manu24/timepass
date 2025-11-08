@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { processMediaFile } from '@/lib/mediaProcessor';
 import { useAuth } from '@/contexts/AuthContext';
 import TopBar from '@/components/TopBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
@@ -40,8 +41,13 @@ const Create = () => {
     setUploading(true);
 
     try {
+      // Process media file for aspect ratio
+      toast.info('Processing media...');
+      const processedFile = await processMediaFile(file);
+      
       // Upload to Cloudinary
-      const mediaUrl = await uploadToCloudinary(file);
+      toast.info('Uploading...');
+      const mediaUrl = await uploadToCloudinary(processedFile);
 
       // Get user data
       const userDoc = await getDoc(doc(db, 'users', user.uid));
