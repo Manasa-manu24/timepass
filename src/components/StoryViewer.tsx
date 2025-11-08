@@ -541,10 +541,11 @@ const StoryViewer = ({
       {!isOwnStory && (
         <form 
           onSubmit={handleStoryInteraction}
-          className="absolute left-4 right-4 z-20 flex items-center gap-2 transition-all duration-300"
+          className="absolute left-4 right-4 z-20 flex items-center gap-2 md:bottom-4"
           onClick={(e) => e.stopPropagation()}
           style={{ 
             bottom: isInputFocused ? 'calc(50vh - 80px)' : '1rem',
+            transition: 'bottom 0.3s ease',
           }}
         >
           <div className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 flex items-center">
@@ -555,7 +556,10 @@ const StoryViewer = ({
               onChange={(e) => setCommentText(e.target.value)}
               onFocus={() => {
                 setIsPaused(true);
-                setIsInputFocused(true);
+                // Only move input on mobile (screen width < 768px)
+                if (window.innerWidth < 768) {
+                  setIsInputFocused(true);
+                }
               }}
               onBlur={() => {
                 setIsPaused(false);
