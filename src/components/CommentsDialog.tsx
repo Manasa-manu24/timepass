@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, doc, getDoc, updateDoc, increment, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ const CommentsDialog = ({ postId, open, onOpenChange }: CommentsDialogProps) => 
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !postId) return;
@@ -114,6 +116,29 @@ const CommentsDialog = ({ postId, open, onOpenChange }: CommentsDialogProps) => 
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) return;
+
+    setDeletingId(commentId);
+
+    try {
+      // Delete comment from Firestore
+      await deleteDoc(doc(db, 'comments', commentId));
+
+      // Decrement comments count on post
+      await updateDoc(doc(db, 'posts', postId), {
+        commentsCount: increment(-1)
+      });
+
+      toast.success('Comment deleted!');
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Failed to delete comment');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
@@ -133,14 +158,14 @@ const CommentsDialog = ({ postId, open, onOpenChange }: CommentsDialogProps) => 
           ) : (
             <div className="space-y-4 py-4">
               {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3">
+                <div key={comment.id} className="flex gap-3 group">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={comment.userProfilePic} />
                     <AvatarFallback>
                       {comment.username[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm">{comment.username}</span>
                       <span className="text-xs text-muted-foreground">
@@ -158,6 +183,19 @@ const CommentsDialog = ({ postId, open, onOpenChange }: CommentsDialogProps) => 
                     </div>
                     <p className="text-sm mt-1">{comment.text}</p>
                   </div>
+                  {/* Delete button - only show for comment author */}
+                  {user && comment.userId === user.uid && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteComment(comment.id)}
+                      disabled={deletingId === comment.id}
+                      aria-label="Delete comment"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
