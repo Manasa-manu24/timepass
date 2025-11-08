@@ -322,14 +322,23 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
                             <Input
                               value={editingText}
                               onChange={(e) => setEditingText(e.target.value)}
-                              className="text-sm"
+                              className="text-sm text-foreground bg-background border-input"
                               autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleEditMessage(message.id, editingText);
+                                } else if (e.key === 'Escape') {
+                                  cancelEditing();
+                                }
+                              }}
                             />
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
                                 onClick={() => handleEditMessage(message.id, editingText)}
                                 disabled={!editingText.trim()}
+                                className="bg-primary text-primary-foreground hover:bg-primary/90"
                               >
                                 Save
                               </Button>
@@ -337,6 +346,7 @@ const ChatInterface = ({ recipientId, recipientUsername, recipientProfilePic, on
                                 size="sm"
                                 variant="outline"
                                 onClick={cancelEditing}
+                                className="bg-background text-foreground border-input hover:bg-accent hover:text-accent-foreground"
                               >
                                 Cancel
                               </Button>

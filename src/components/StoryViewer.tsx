@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, updateDoc, arrayUnion, getDoc, addDoc, collection, increment, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, addDoc, collection, increment, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -264,30 +264,41 @@ const StoryViewer = ({
       const senderProfilePic = userData?.profilePicUrl || '';
 
       if (!commentText.trim()) {
-        // LIKE STORY - when input is empty and heart is clicked
-        // Add like to story
-        await updateDoc(doc(db, 'posts', currentStory.id), {
-          likes: arrayUnion(user.uid)
-        });
+        // LIKE/UNLIKE STORY - when input is empty and heart is clicked
+        if (isLiked) {
+          // UNLIKE - Remove like from story
+          await updateDoc(doc(db, 'posts', currentStory.id), {
+            likes: arrayRemove(user.uid)
+          });
 
-        // Update local state immediately
-        setIsLiked(true);
+          // Update local state immediately
+          setIsLiked(false);
+          toast.success('Story unliked');
+        } else {
+          // LIKE - Add like to story
+          await updateDoc(doc(db, 'posts', currentStory.id), {
+            likes: arrayUnion(user.uid)
+          });
 
-        // Create notification for story author
-        await addDoc(collection(db, 'notifications'), {
-          userId: currentStory.userId,
-          type: 'like',
-          senderId: user.uid,
-          senderUsername: senderUsername,
-          senderProfilePic: senderProfilePic,
-          postId: currentStory.id,
-          postType: 'story',
-          message: `liked your story`,
-          timestamp: serverTimestamp(),
-          read: false
-        });
+          // Update local state immediately
+          setIsLiked(true);
 
-        toast.success('Story liked!');
+          // Create notification for story author
+          await addDoc(collection(db, 'notifications'), {
+            userId: currentStory.userId,
+            type: 'like',
+            senderId: user.uid,
+            senderUsername: senderUsername,
+            senderProfilePic: senderProfilePic,
+            postId: currentStory.id,
+            postType: 'story',
+            message: `liked your story`,
+            timestamp: serverTimestamp(),
+            read: false
+          });
+
+          toast.success('Story liked!');
+        }
       } else {
         // SEND MESSAGE - when input has text
         const messageText = commentText.trim();
@@ -348,7 +359,7 @@ const StoryViewer = ({
       }
     } catch (error) {
       console.error('Error with story interaction:', error);
-      toast.error(commentText.trim() ? 'Failed to send message' : 'Failed to like story');
+      toast.error(commentText.trim() ? 'Failed to send message' : (isLiked ? 'Failed to unlike story' : 'Failed to like story'));
     } finally {
       setSendingComment(false);
     }
@@ -525,17 +536,19 @@ const StoryViewer = ({
               placeholder="Reply to story..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
+              onFocus={() => setIsPaused(true)}
+              onBlur={() => setIsPaused(false)}
               disabled={sendingComment}
               className="bg-transparent border-0 text-white placeholder:text-white/70 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
             />
           </div>
           <Button
             type="submit"
-            disabled={sendingComment || (!commentText.trim() && isLiked)}
+            disabled={sendingComment}
             variant="ghost"
             size="icon"
             className="text-white hover:bg-white/20 disabled:opacity-50"
-            title={commentText.trim() ? 'Send message' : isLiked ? 'Already liked' : 'Like story'}
+            title={commentText.trim() ? 'Send message' : isLiked ? 'Unlike story' : 'Like story'}
           >
             {commentText.trim() ? (
               <AiOutlineSend size={24} className="text-primary" />
