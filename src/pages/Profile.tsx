@@ -431,6 +431,9 @@ const Profile = () => {
                         className="w-full h-full object-cover"
                         muted
                         playsInline
+                        crossOrigin="anonymous"
+                        preload="metadata"
+                        onError={(e) => console.error('Video loading error:', e)}
                       />
                       {/* Video/Reel indicator overlay */}
                       <div className="absolute top-2 right-2 z-10">

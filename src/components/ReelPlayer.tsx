@@ -204,6 +204,15 @@ const ReelPlayer = ({ reel, isActive }: ReelPlayerProps) => {
           loop
           muted={isMuted}
           playsInline
+          crossOrigin="anonymous"
+          preload="metadata"
+          onError={(e) => {
+            console.error('Video loading error:', e);
+            // Fallback: try to reload the video
+            if (e.currentTarget.error?.code === 2) {
+              console.log('Attempting to reload video...');
+            }
+          }}
         />
       )}
 

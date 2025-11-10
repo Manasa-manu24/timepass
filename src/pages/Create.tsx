@@ -104,6 +104,9 @@ const Create = () => {
                         src={preview}
                         controls
                         className="max-h-96 mx-auto rounded-lg"
+                        crossOrigin="anonymous"
+                        preload="metadata"
+                        onError={(e) => console.error('Video preview error:', e)}
                       />
                     )}
                     <Button

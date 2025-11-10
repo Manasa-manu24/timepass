@@ -155,7 +155,16 @@ const CameraCapture = ({ onCapture, onClose, captureMode = 'photo' }: CameraCapt
           <img src={capturedImage} alt="Captured" className="max-w-full max-h-full object-contain" />
         ) : capturedVideo ? (
           // Preview captured video
-          <video src={capturedVideo} controls className="max-w-full max-h-full object-contain" autoPlay loop />
+          <video 
+            src={capturedVideo} 
+            controls 
+            className="max-w-full max-h-full object-contain" 
+            autoPlay 
+            loop
+            crossOrigin="anonymous"
+            preload="metadata"
+            onError={(e) => console.error('Video preview error:', e)}
+          />
         ) : (
           // Live camera view
           <video

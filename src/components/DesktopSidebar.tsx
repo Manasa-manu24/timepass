@@ -6,7 +6,9 @@ import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useTheme } from 'next-themes';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
@@ -20,6 +22,24 @@ const DesktopSidebar = () => {
   const { unreadCount: unreadNotifications } = useUnreadNotifications();
   const location = useLocation();
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [userProfilePic, setUserProfilePic] = useState<string>('');
+
+  // Fetch current user's profile picture
+  useEffect(() => {
+    if (!user?.uid) return;
+    
+    const fetchUserProfile = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        setUserProfilePic(userData?.profilePicUrl || '');
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user?.uid]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -105,7 +125,7 @@ const DesktopSidebar = () => {
             <NavItem to="/saved" icon={BsBookmark} activeIcon={BsBookmarkFill} label="Saved" />
             <NavItem to={`/profile/${user?.uid}`} icon={() => (
               <Avatar className={`w-7 h-7 ${isActive(`/profile/${user?.uid}`) ? 'ring-2 ring-foreground' : ''}`}>
-                <AvatarImage src="" />
+                <AvatarImage src={userProfilePic || ''} />
                 <AvatarFallback className="text-xs">
                   {user?.email?.[0].toUpperCase() || 'U'}
                 </AvatarFallback>

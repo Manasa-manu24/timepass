@@ -278,6 +278,9 @@ const PostViewerModal = ({
                   className="max-w-full max-h-full object-contain"
                   autoPlay
                   loop
+                  crossOrigin="anonymous"
+                  preload="metadata"
+                  onError={(e) => console.error('Video loading error:', e)}
                 />
               ) : (
                 <img

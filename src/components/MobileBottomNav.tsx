@@ -3,13 +3,33 @@ import { AiOutlineHome, AiFillHome, AiOutlineSearch, AiOutlineCompass, AiOutline
 import { BsCameraReels, BsCameraReelsFill } from 'react-icons/bs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import UploadSheet from './UploadSheet';
 
 const MobileBottomNav = () => {
   const { user } = useAuth();
   const location = useLocation();
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [userProfilePic, setUserProfilePic] = useState<string>('');
+
+  // Fetch current user's profile picture
+  useEffect(() => {
+    if (!user?.uid) return;
+    
+    const fetchUserProfile = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        setUserProfilePic(userData?.profilePicUrl || '');
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user?.uid]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -69,7 +89,7 @@ const MobileBottomNav = () => {
             aria-selected={isActive(`/profile/${user?.uid}`)}
           >
             <Avatar className={`w-7 h-7 transition-all duration-200 ${isActive(`/profile/${user?.uid}`) ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
-              <AvatarImage src="" />
+              <AvatarImage src={userProfilePic || ''} />
               <AvatarFallback className="text-xs">
                 {user?.email?.[0].toUpperCase() || 'U'}
               </AvatarFallback>

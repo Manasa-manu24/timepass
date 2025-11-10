@@ -202,6 +202,9 @@ const UploadModal = ({ open, onOpenChange }: UploadModalProps) => {
                     <video
                       src={URL.createObjectURL(file)}
                       className="w-full h-full object-cover rounded-lg"
+                      crossOrigin="anonymous"
+                      preload="metadata"
+                      onError={(e) => console.error('Video preview error:', e)}
                     />
                   ) : (
                     <img
