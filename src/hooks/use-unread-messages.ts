@@ -35,13 +35,29 @@ export const useUnreadMessages = () => {
             continue;
           }
 
-          // Only count as unread if the last message was NOT sent by the current user
-          // This means someone else sent the most recent message
+          // Only check if the last message was NOT sent by the current user
           if (chatData.lastMessageSender !== user.uid) {
-            // Check if the user has read this message by looking at the chat's messages
-            // For simplicity, we'll count it as unread if the last sender is not the current user
-            // In a more advanced implementation, you could track read receipts
-            totalUnread++;
+            // Check the actual messages to see if they've been read
+            const messagesRef = collection(db, 'chats', chatId, 'messages');
+            const messagesQuery = query(messagesRef, where('senderId', '==', chatData.lastMessageSender));
+            const messagesSnapshot = await getDocs(messagesQuery);
+            
+            // Check if there are any messages from the other user that haven't been seen
+            let hasUnreadMessages = false;
+            for (const msgDoc of messagesSnapshot.docs) {
+              const msgData = msgDoc.data();
+              const seenBy = msgData.seenBy || [];
+              
+              // If this message hasn't been seen by the current user, it's unread
+              if (!seenBy.includes(user.uid)) {
+                hasUnreadMessages = true;
+                break;
+              }
+            }
+            
+            if (hasUnreadMessages) {
+              totalUnread++;
+            }
           }
         }
 

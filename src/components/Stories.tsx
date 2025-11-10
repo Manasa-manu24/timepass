@@ -38,6 +38,24 @@ const Stories = () => {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [allStoryGroups, setAllStoryGroups] = useState<StoryGroup[]>([]);
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
+  const [currentUserProfilePic, setCurrentUserProfilePic] = useState<string>('');
+
+  // Fetch current user's profile picture
+  useEffect(() => {
+    if (!user?.uid) return;
+    
+    const fetchUserProfile = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        setCurrentUserProfilePic(userData?.profilePicUrl || '');
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user?.uid]);
 
   useEffect(() => {
     // Query for recent stories (last 24 hours)
@@ -242,7 +260,7 @@ const Stories = () => {
                   // No stories - show add button
                   <>
                     <Avatar className="w-16 h-16 ring-2 ring-border">
-                      <AvatarImage src={user?.photoURL || ''} />
+                      <AvatarImage src={currentUserProfilePic || ''} />
                       <AvatarFallback className="text-sm">
                         {user?.email?.[0].toUpperCase() || 'U'}
                       </AvatarFallback>
